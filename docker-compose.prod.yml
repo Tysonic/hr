@@ -1,0 +1,87 @@
+# Production: docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+# Required variables: APP_DOMAIN, ACME_EMAIL, CLOUDFLARE_API_TOKEN, POSTGRES_PASSWORD, TYHR_DB_PASSWORD,
+# AUTH_URL, KC_PROVISIONER_SECRET. Optional: PLATFORM_TENANT.
+# Sign-in is MyBiz's Keycloak, shared so one sign-in covers both apps: AUTH_URL is its address (e.g.
+# https://auth.tycount.tysoftltd.com) and the realm is MyBiz. Run deploy/keycloak/setup.sh against it once to add
+# TyHR's clients and roles; it prints the provisioner secret for KC_PROVISIONER_SECRET.
+name: tyhr
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      TYHR_DB_PASSWORD: ${TYHR_DB_PASSWORD:?}
+    volumes:
+      - db:/var/lib/postgresql/data
+      - ./deploy/postgres/init-prod.sh:/docker-entrypoint-initdb.d/10-init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 20
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=db;Database=tyhr;Username=tyhr;Password=${TYHR_DB_PASSWORD:?}
+      Database__MigrateOnStartup: "true"
+      Auth__Authority: ${AUTH_URL:?}/realms/MyBiz
+      Auth__Audience: tyhr-api
+      # MyBiz's operator company: its PlatformAdmin role only counts for that company's users. Empty = anywhere.
+      Auth__PlatformTenant: ${PLATFORM_TENANT:-}
+      Keycloak__BaseUrl: ${AUTH_URL:?}
+      Keycloak__Realm: MyBiz
+      Keycloak__ProvisionerSecret: ${KC_PROVISIONER_SECRET:?}
+      Keycloak__WebUrl: https://${APP_DOMAIN:?}/
+      Cors__Origins__0: https://${APP_DOMAIN:?}
+      # Encrypts ID, bank and mobile-money numbers: openssl rand -base64 32. Back it up; losing it loses those fields.
+      Secrets__Key: ${TYHR_SECRETS_KEY:?}
+      Storage__Path: /files
+      # Reminder emails. Empty SMTP_HOST sends nothing (reminders wait until mail is configured).
+      Mail__Host: ${SMTP_HOST:-}
+      Mail__Port: ${SMTP_PORT:-587}
+      Mail__Security: ${SMTP_SECURITY:-StartTls}
+      Mail__Username: ${SMTP_USERNAME:-}
+      Mail__Password: ${SMTP_PASSWORD:-}
+      Mail__From: ${MAIL_FROM:-TyHR <no-reply@tyhr.local>}
+    volumes:
+      - dataprotection-keys:/keys
+      - files:/files
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./web
+      args:
+        VITE_OIDC_AUTHORITY: ${AUTH_URL:?}/realms/MyBiz
+    restart: unless-stopped
+
+  caddy:
+    build: ./deploy/caddy
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?}
+      ACME_EMAIL: ${ACME_EMAIL:?}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+volumes:
+  db:
+  caddy-data:
+  dataprotection-keys:
+  files:

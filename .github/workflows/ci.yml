@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore TyHr.sln
+      - run: dotnet build TyHr.sln --configuration Release --no-restore
+      # Integration tests start a Postgres container through Testcontainers (Docker is available on ubuntu runners).
+      - run: dotnet test TyHr.sln --configuration Release --no-build --logger "trx;LogFileName=results.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  docker-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f docker-compose.prod.yml build api web
+        env:
+          APP_DOMAIN: example.test
+          ACME_EMAIL: unused
+          CLOUDFLARE_API_TOKEN: unused
+          POSTGRES_PASSWORD: unused
+          TYHR_DB_PASSWORD: unused
+          AUTH_URL: https://auth.example.test
+          TYHR_SECRETS_KEY: ci-placeholder
+          KC_PROVISIONER_SECRET: unused

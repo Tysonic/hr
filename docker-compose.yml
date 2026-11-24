@@ -1,0 +1,31 @@
+# Local development services. The API and web app run on the host (dotnet run / npm run dev); see README.md.
+# Ports are offset from the other Tysoft products (sacco, MyBiz) so their stacks can run side by side.
+# Sign-in uses MyBiz's Keycloak (shared realm "MyBiz", http://localhost:8082): cd ../erp/MyBiz && docker compose up -d keycloak,
+# then deploy/keycloak/setup.sh --dev-users.
+name: tyhr
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: tyhr
+      POSTGRES_USER: tyhr
+      POSTGRES_PASSWORD: tyhr-dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tyhr -d tyhr"]
+      interval: 5s
+      retries: 20
+
+  # Catches TyHR's own email (notifications): http://localhost:8025. Keycloak's emails go through the realm's SMTP.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  db:

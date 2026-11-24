@@ -1,0 +1,27 @@
+# OS / editor
+.DS_Store
+/.idea/
+/.vscode/
+
+# .NET
+bin/
+obj/
+# Build output some tools write with a Windows path: one folder named "bin\Debug"
+bin\\*/
+TestResults/
+*.DotSettings.user
+
+# Node
+node_modules/
+dist/
+
+# Local secrets: Keycloak dev-user passwords, production env
+*.local.txt
+.env.prod
+http-client.private.env.json
+
+# Uploaded files in local development (Storage:Path)
+/data/
+
+# Backups made by deploy/backup.sh
+/backups/

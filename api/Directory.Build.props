@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Tools that write a folder literally named "bin\Debug" on macOS would otherwise have its files copied into bin/ again on every build, nesting deeper each time. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin*/**;obj*/**</DefaultItemExcludes>
+  </PropertyGroup>
+</Project>

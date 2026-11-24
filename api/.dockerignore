@@ -1,0 +1,6 @@
+**/bin
+# Also odd build output such as a literal "bin\Debug" folder (Windows-style path written by design-time tools),
+# which breaks MSBuild's file globbing on Linux.
+**/bin?*
+**/obj
+tests

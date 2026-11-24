@@ -1,0 +1,84 @@
+{
+  "clients": [
+    {
+      "clientId": "tyhr-api",
+      "name": "TyHR API",
+      "description": "Holds the TyHR roles (client roles) and is the audience of TyHR access tokens. Nobody signs in to it.",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false
+    },
+    {
+      "clientId": "tyhr-web",
+      "name": "TyHR web",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5174/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5174"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "protocolMappers": [
+        {
+          "name": "tyhr-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "tyhr-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "tenant",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "tenant",
+            "claim.name": "tenant",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "tyhr-provisioner",
+      "name": "TyHR API user provisioning",
+      "enabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "roles": {
+    "client": {
+      "tyhr-api": [
+        { "name": "hr-admin", "description": "A company's HR administrator: settings, users and all HR records." },
+        { "name": "hr-officer", "description": "Keeps a company's employee records, leave and attendance." },
+        { "name": "payroll-officer", "description": "Prepares a company's payroll." },
+        { "name": "line-manager", "description": "Approves their team's requests and reviews their team." },
+        { "name": "employee", "description": "Self-service: own profile, leave, payslips." }
+      ]
+    }
+  }
+}
