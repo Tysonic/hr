@@ -8,7 +8,7 @@
 #                                          # (passwords -> deploy/keycloak/dev-users.local.txt)
 #
 # Runs against a Keycloak container on this machine: locally MyBiz's (cd erp/MyBiz && docker compose up -d keycloak).
-# On the production server set KEYCLOAK_CONTAINER, KEYCLOAK_URL=https://auth.<domain> and APP_DOMAIN (TyHR's address,
+# On the production server set KEYCLOAK_CONTAINER, KEYCLOAK_URL=https://auth.<domain> and TYHR_DOMAIN (TyHR's address,
 # e.g. hr.tysoftltd.com, where tyhr-web may sign in), and copy the printed provisioner secret into TyHR's
 # KC_PROVISIONER_SECRET. Safe to re-run: existing roles, passwords and tyhr-web's addresses are kept.
 set -euo pipefail
@@ -23,13 +23,13 @@ CLIENTS_FILE="$DIR/tyhr-clients.json"
 USERS_FILE="$DIR/dev-users.local.txt"
 API_PROJECT="$DIR/../../api/src/TyHr.Api"
 
-APP_DOMAIN="${APP_DOMAIN:-}"
+TYHR_DOMAIN="${TYHR_DOMAIN:-}"
 # Outside local development tyhr-web signs in at TyHR's own address only, never at localhost.
 case "$URL" in
   http://localhost:*) ;;
-  *) [ -n "$APP_DOMAIN" ] || { echo "Set APP_DOMAIN to TyHR's address, e.g. APP_DOMAIN=hr.tysoftltd.com" >&2; exit 2; } ;;
+  *) [ -n "$TYHR_DOMAIN" ] || { echo "Set TYHR_DOMAIN to TyHR's address, e.g. TYHR_DOMAIN=hr.tysoftltd.com" >&2; exit 2; } ;;
 esac
-case "$APP_DOMAIN" in *[!A-Za-z0-9.-]*) echo "APP_DOMAIN is a bare host name, e.g. hr.tysoftltd.com (no https:// or path)." >&2; exit 2 ;; esac
+case "$TYHR_DOMAIN" in *[!A-Za-z0-9.-]*) echo "TYHR_DOMAIN is a bare host name, e.g. hr.tysoftltd.com (no https:// or path)." >&2; exit 2 ;; esac
 
 kc() { docker exec -i "$CONTAINER" /opt/keycloak/bin/kcadm.sh "$@" --config /tmp/kcadm.config; }
 
@@ -40,10 +40,17 @@ fi
 for _ in $(seq 90); do curl -sf -o /dev/null "$URL/realms/$REALM" && break; sleep 2; done
 curl -sf -o /dev/null "$URL/realms/$REALM" || { echo "Realm $REALM is not reachable at $URL" >&2; exit 1; }
 
-# Log in with the bootstrap admin from the container's own environment (never echoed).
-docker exec "$CONTAINER" sh -c '/opt/keycloak/bin/kcadm.sh config credentials --config /tmp/kcadm.config \
+# Log in with the bootstrap admin from the container's own environment (never echoed). Production's has been replaced
+# by personal admins: then ask, and kcadm itself prompts for the password.
+trap 'docker exec "$CONTAINER" rm -f /tmp/kcadm.config >/dev/null 2>&1 || true' EXIT
+if ! docker exec "$CONTAINER" sh -c '/opt/keycloak/bin/kcadm.sh config credentials --config /tmp/kcadm.config \
   --server http://localhost:8080 --realm master \
-  --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD"' >/dev/null
+  --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD"' >/dev/null 2>&1; then
+  echo "The container's bootstrap admin can't sign in. Enter a Keycloak admin of the master realm."
+  read -r -p "Username: " admin
+  docker exec -it "$CONTAINER" /opt/keycloak/bin/kcadm.sh config credentials --config /tmp/kcadm.config \
+    --server http://localhost:8080 --realm master --user "$admin"
+fi
 
 client_id() { kc get clients -r "$REALM" -q "clientId=$1" --fields id --format csv --noquotes; }
 
@@ -53,9 +60,9 @@ echo "Adding TyHR's clients and roles to realm $REALM..."
 kc create "realms/$REALM/partialImport" -s ifResourceExists=SKIP -f - < "$CLIENTS_FILE" >/dev/null
 for clientId in $(jq -r '.clients[].clientId' "$CLIENTS_FILE"); do
   id="$(client_id "$clientId" </dev/null)"   # looked up first: kc reads stdin, which would swallow the piped JSON
-  # tyhr-web keeps the addresses it already has and gains the file's (local development) or APP_DOMAIN's.
+  # tyhr-web keeps the addresses it already has and gains the file's (local development) or TYHR_DOMAIN's.
   current="$(kc get "clients/$id" -r "$REALM" </dev/null)"
-  jq --arg c "$clientId" --arg domain "$APP_DOMAIN" --argjson current "$current" '
+  jq --arg c "$clientId" --arg domain "$TYHR_DOMAIN" --argjson current "$current" '
     def addresses($have; $file; $new): if $domain == "" then ($have // []) + $file
       else (($have // []) | map(select(startswith("http://localhost") | not))) + [$new] end | unique;
     .clients[] | select(.clientId == $c) | del(.protocolMappers)

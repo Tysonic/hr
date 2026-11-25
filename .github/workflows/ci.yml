@@ -47,12 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose -f docker-compose.prod.yml build api web
+      - run: docker compose -f docker-compose.prod.yml build tyhr-api tyhr-web
         env:
-          APP_DOMAIN: example.test
-          ACME_EMAIL: unused
-          CLOUDFLARE_API_TOKEN: unused
-          POSTGRES_PASSWORD: unused
+          TYHR_DOMAIN: example.test
           TYHR_DB_PASSWORD: unused
           AUTH_URL: https://auth.example.test
           TYHR_SECRETS_KEY: ci-placeholder

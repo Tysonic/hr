@@ -31,7 +31,8 @@ You need:
 - the .NET 10 SDK;
 - Node 22.12 or later (`nvm install` reads `web/.nvmrc`);
 - Docker;
-- MyBiz's repository next to this one (`../erp/MyBiz`), for Keycloak.
+- MyBiz's repository next to this one (`../erp/MyBiz`), for Keycloak;
+- the shared Tysoft Postgres 17 container running (`postgres_container`; set `PG_CONTAINER` if yours is named differently).
 
 ```sh
 # 1. Keycloak (MyBiz's), on http://localhost:8082
@@ -41,7 +42,9 @@ You need:
 #    Saves the provisioner secret to the API's user-secrets and the users' passwords to deploy/keycloak/dev-users.local.txt.
 deploy/keycloak/setup.sh --dev-users
 
-# 3. Postgres (port 5433) and Mailpit (http://localhost:8025)
+# 3. TyHR's database on the shared Postgres (container postgres_container, port 5432), with its connection string
+#    saved to the API's user-secrets; and Mailpit (http://localhost:8025)
+deploy/postgres/setup-dev.sh
 docker compose up -d
 
 # 4. API on http://localhost:5262 (applies migrations and seeds the demo company on start)
@@ -68,7 +71,7 @@ Ports are offset from sacco and MyBiz so all three stacks can run together:
 |---|---|
 | API | 5262 |
 | Web | 5174 |
-| Postgres | 5433 |
+| Postgres (shared) | 5432 |
 | Mailpit SMTP | 1025 |
 | Mailpit UI | 8025 |
 | Keycloak (MyBiz) | 8082 |
@@ -86,8 +89,8 @@ CI (`.github/workflows/ci.yml`) runs these checks and builds the production imag
 
 ## Production
 
-`docker-compose.prod.yml` runs Postgres, the API, the web app and Caddy, which serves HTTPS through a Cloudflare DNS
-challenge. Keycloak is the shared production one.
+TyHR runs on MyBiz's (Tycount's) production server. `docker-compose.prod.yml` is just the API and the web app; Caddy,
+Keycloak and Postgres are Tycount's, connected by `deploy/tycount.override.yml`.
 
 [docs/deploy.md](docs/deploy.md) is the guide: first deploy and settings, backups (`deploy/backup.sh`) and restores
 (`deploy/restore.sh`), updates, monitoring, the security checklist and load-test results.

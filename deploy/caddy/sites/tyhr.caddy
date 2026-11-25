@@ -1,0 +1,26 @@
+# TyHR's public address, served by Tycount's Caddy on the shared server (docs/deploy.md). After changing it, from
+# /opt/mybiz/MyBiz:  docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+#   https://<TYHR_DOMAIN>   the web app; /api/* -> the API
+# The certificate is Let's Encrypt over HTTP, for this host name only.
+{$TYHR_DOMAIN:hr.tysoftltd.com} {
+	encode zstd gzip
+
+	header {
+		# No includeSubDomains: other tysoftltd.com names decide for themselves.
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	handle /api/* {
+		request_body {
+			max_size 20MB
+		}
+		reverse_proxy tyhr-api:8080
+	}
+
+	handle {
+		reverse_proxy tyhr-web:80
+	}
+}

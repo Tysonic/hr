@@ -1,6 +1,6 @@
 # OS / editor
 .DS_Store
-/.idea/
+.idea/
 /.vscode/
 
 # .NET

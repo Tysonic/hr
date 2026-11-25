@@ -99,8 +99,17 @@ M2, M3 (payroll) and M4 (self-service) are done. M5 (recruitment, hiring, onboar
 ## Production
 
 - `docs/deploy.md` is the deploy guide; keep it in step with `docker-compose.prod.yml`, `deploy/` and new settings.
-- Everyone signs in at `https://APP_DOMAIN`; Caddy redirects subdomains there, because Keycloak can't take wildcard redirect URIs. `setup.sh` registers `APP_DOMAIN` on `tyhr-web` and keeps addresses already there.
-- `backup.sh` and `restore.sh` were tested as a round trip on a throwaway stack. Repeat that after changing either.
+- TyHR shares MyBiz's (Tycount's) server and borrows its Caddy, Keycloak and Postgres over the `tyhr-edge` network (`deploy/tycount.override.yml`, the website's pattern). Never edit MyBiz's repository for this.
+- Compose service names start with `tyhr-`, because Tycount's Caddy is on this network too and a service called `api` would take some of Tycount's traffic.
+- The API talks to Keycloak at `http://keycloak:8080`: Tycount's Caddy blocks `/admin` from outside, which invitations need.
+- `/etc/caddy/sites` can only be mounted once, so `deploy/caddy/sites/tysoft-website.caddy` re-imports the website's files. TyHR's override goes last in Tycount's `COMPOSE_FILE`.
+- Everyone signs in at `https://TYHR_DOMAIN`. `setup.sh` registers it on `tyhr-web` and keeps addresses already there.
+- `create-db.sh`, `backup.sh` and `restore.sh` touch only the `tyhr` database in the shared Postgres. They were tested on a simulated shared server; repeat that after changing them.
+
+## Local database
+
+- Development uses the shared Tysoft Postgres (`postgres_container`, localhost:5432), database and role `tyhr`, set up by `deploy/postgres/setup-dev.sh`. The connection string is in user-secrets, not appsettings. Other products' databases are on that server: touch only `tyhr`.
+- Tests still use their own Testcontainers Postgres.
 
 ## Don'ts
 

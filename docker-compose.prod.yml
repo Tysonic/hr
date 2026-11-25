@@ -1,47 +1,50 @@
-# Production: docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
-# Required variables: APP_DOMAIN, ACME_EMAIL, CLOUDFLARE_API_TOKEN, POSTGRES_PASSWORD, TYHR_DB_PASSWORD,
-# AUTH_URL, KC_PROVISIONER_SECRET. Optional: PLATFORM_TENANT.
-# Sign-in is MyBiz's Keycloak, shared so one sign-in covers both apps: AUTH_URL is its address (e.g.
-# https://auth.tycount.tysoftltd.com) and the realm is MyBiz. Run deploy/keycloak/setup.sh against it once to add
-# TyHR's clients and roles; it prints the provisioner secret for KC_PROVISIONER_SECRET.
+# Production, on the server TyHR shares with Tycount (MyBiz); see docs/deploy.md:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# Required variables: TYHR_DOMAIN, TYHR_DB_PASSWORD, TYHR_SECRETS_KEY, AUTH_URL, KC_PROVISIONER_SECRET.
+#
+# TyHR borrows three of Tycount's services, which join the "tyhr-edge" network through deploy/tycount.override.yml:
+# - Caddy is the one public entrance (deploy/caddy/sites/tyhr.caddy).
+# - Keycloak signs people in (realm MyBiz).
+# - Postgres holds TyHR's database: "tyhr", owned by its own "tyhr" login (deploy/postgres/create-db.sh).
+# This stack is only TyHR's two containers, and nothing is published.
+#
+# Service names start with tyhr- on purpose: Tycount's Caddy is on this network and on Tycount's own, where "api" is
+# Tycount's. A service called "api" here would be given some of Tycount's traffic.
 name: tyhr
 
-services:
-  db:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
-      TYHR_DB_PASSWORD: ${TYHR_DB_PASSWORD:?}
-    volumes:
-      - db:/var/lib/postgresql/data
-      - ./deploy/postgres/init-prod.sh:/docker-entrypoint-initdb.d/10-init.sh:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      retries: 20
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
 
-  api:
+services:
+  tyhr-api:
     build: ./api
     restart: unless-stopped
+    logging: *logging
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__Default: Host=db;Database=tyhr;Username=tyhr;Password=${TYHR_DB_PASSWORD:?}
+      # Tycount's Postgres, whose connections every product shares: hence the pool limit. If it isn't reachable, the
+      # API retries for a minute, stops, and Docker starts it again.
+      ConnectionStrings__Default: Host=postgres;Database=tyhr;Username=tyhr;Password=${TYHR_DB_PASSWORD:?};Maximum Pool Size=30
       Database__MigrateOnStartup: "true"
-      Auth__Authority: ${AUTH_URL:?}/realms/MyBiz
+      # Tycount's Keycloak over tyhr-edge: Tycount's Caddy doesn't let the admin API (used for invitations) through
+      # from outside. Tokens still name the public address as their issuer, which Keycloak itself reports here.
+      Auth__Authority: http://keycloak:8080/realms/MyBiz
+      Auth__RequireHttpsMetadata: "false"
       Auth__Audience: tyhr-api
       # MyBiz's operator company: its PlatformAdmin role only counts for that company's users. Empty = anywhere.
       Auth__PlatformTenant: ${PLATFORM_TENANT:-}
-      Keycloak__BaseUrl: ${AUTH_URL:?}
+      Keycloak__BaseUrl: http://keycloak:8080
       Keycloak__Realm: MyBiz
       Keycloak__ProvisionerSecret: ${KC_PROVISIONER_SECRET:?}
-      Keycloak__WebUrl: https://${APP_DOMAIN:?}/
-      Cors__Origins__0: https://${APP_DOMAIN:?}
+      Keycloak__WebUrl: https://${TYHR_DOMAIN:?}/
+      Cors__Origins__0: https://${TYHR_DOMAIN:?}
       # Encrypts ID, bank and mobile-money numbers: openssl rand -base64 32. Back it up; losing it loses those fields.
       Secrets__Key: ${TYHR_SECRETS_KEY:?}
       Storage__Path: /files
-      # Reminder emails. Empty SMTP_HOST sends nothing (reminders wait until mail is configured).
+      # Outgoing mail. Empty SMTP_HOST sends nothing (reminders wait until mail is configured).
       Mail__Host: ${SMTP_HOST:-}
       Mail__Port: ${SMTP_PORT:-587}
       Mail__Security: ${SMTP_SECURITY:-StartTls}
@@ -51,37 +54,23 @@ services:
     volumes:
       - dataprotection-keys:/keys
       - files:/files
-    depends_on:
-      db:
-        condition: service_healthy
+    networks: [edge]
 
-  web:
+  tyhr-web:
     build:
       context: ./web
       args:
+        # The address browsers use.
         VITE_OIDC_AUTHORITY: ${AUTH_URL:?}/realms/MyBiz
     restart: unless-stopped
-
-  caddy:
-    build: ./deploy/caddy
-    restart: unless-stopped
-    environment:
-      APP_DOMAIN: ${APP_DOMAIN:?}
-      ACME_EMAIL: ${ACME_EMAIL:?}
-      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?}
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - caddy-data:/data
-    depends_on:
-      api:
-        condition: service_healthy
-      web:
-        condition: service_started
+    logging: *logging
+    networks: [edge]
 
 volumes:
-  db:
-  caddy-data:
   dataprotection-keys:
   files:
+
+networks:
+  # A fixed name, so Tycount's stack can join it. Its own network, so TyHR and the company website can't reach each other.
+  edge:
+    name: tyhr-edge
