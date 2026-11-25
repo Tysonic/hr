@@ -135,6 +135,9 @@ public record EmailMessage(IReadOnlyList<string> To, string Subject, string Html
 
 public record EmailAttachment(string FileName, string ContentType, byte[] Content);
 
+/// <summary>The mail server can't be reached or won't let TyHR sign in, so no message would get through.</summary>
+public class MailUnavailableException(Exception inner) : Exception("The mail server can't be reached or refused the sign-in: " + inner.Message, inner);
+
 /// <summary>Sends email through the configured SMTP server.</summary>
 public interface IEmailSender
 {
@@ -144,6 +147,7 @@ public interface IEmailSender
     /// <summary>
     /// Sends several messages, over one connection where the sender can, calling <paramref name="done"/> after each with
     /// its index and the error (null when sent); one failure doesn't stop the rest. False when no mail server is configured.
+    /// Throws <see cref="MailUnavailableException"/>, leaving the rest untried, when the server itself is the problem.
     /// </summary>
     async Task<bool> SendManyAsync(IReadOnlyList<EmailMessage> messages, Func<int, Exception?, Task> done, CancellationToken cancellationToken = default)
     {
@@ -154,7 +158,7 @@ public interface IEmailSender
             {
                 if (!await SendAsync(messages[i], cancellationToken)) return false;
             }
-            catch (Exception e) when (e is not OperationCanceledException) { error = e; }
+            catch (Exception e) when (e is not (OperationCanceledException or MailUnavailableException)) { error = e; }
             await done(i, error);
         }
         return true;

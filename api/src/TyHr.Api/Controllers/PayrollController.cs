@@ -123,7 +123,7 @@ public class PayrollOutputsController(PayrollOutputService outputs) : Controller
     public async Task<IActionResult> PayslipPdf(Guid payslipId, CancellationToken ct) => Send(await outputs.PayslipPdfAsync(payslipId, ct));
 
     [HttpPost("runs/{id:guid}/email-payslips"), Authorize(Policy = Permissions.PayrollPrepare)]
-    public Task<EmailPayslipsResult> EmailPayslips(Guid id, CancellationToken ct) => outputs.EmailPayslipsAsync(id, ct);
+    public Task<EmailPayslipsResult> EmailPayslips(Guid id, [FromQuery] Guid? after, CancellationToken ct) => outputs.EmailPayslipsAsync(id, after, ct);
 
     /// <summary>Bank or mobile-money bulk payment CSV. Account numbers in clear, so only for those who prepare payroll.</summary>
     [HttpGet("runs/{id:guid}/payment-file"), Authorize(Policy = Permissions.PayrollPrepare)]

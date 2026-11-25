@@ -25,8 +25,10 @@ public interface IPayslipRenderer
 }
 
 public record OutputFile(byte[] Content, string FileName, string ContentType);
-/// <param name="Remaining">Payslips with an address still to send (including any that failed); send again to continue.</param>
-public record EmailPayslipsResult(int Sent, int AlreadySent, IReadOnlyList<string> NoEmail, IReadOnlyList<string> Failed, bool MailConfigured, int Remaining);
+/// <param name="Failed">Those of this batch that couldn't be sent.</param>
+/// <param name="Remaining">Payslips with an address after this batch, not yet tried.</param>
+/// <param name="Next">Pass this to send the next batch; null when there are no more.</param>
+public record EmailPayslipsResult(int Sent, int AlreadySent, IReadOnlyList<string> NoEmail, IReadOnlyList<string> Failed, bool MailConfigured, int Remaining, Guid? Next);
 public record MyPayslipDto(Guid Id, string RunName, int Year, int Month, DateOnly PayDate, decimal Gross, decimal Net, string CurrencyCode);
 
 /// <summary>
@@ -41,6 +43,7 @@ public class PayrollOutputService(IAppDbContext db, ITenantContext tenantContext
 
     /// <summary>Payslips emailed per request (about half a minute's work), so a big payroll goes in several requests.</summary>
     public const int EmailBatch = 100;
+    public int BatchSize { get; init; } = EmailBatch;
 
     // Payslips
 
@@ -75,20 +78,26 @@ public class PayrollOutputService(IAppDbContext db, ITenantContext tenantContext
         return new OutputFile(await RenderAsync(slip, run, ct), FileName(slip, run), Pdf);
     }
 
-    /// <summary>Emails each payslip of a locked payroll to the employee's work email (or personal, if none), once.</summary>
-    public async Task<EmailPayslipsResult> EmailPayslipsAsync(Guid runId, CancellationToken ct)
+    /// <summary>
+    /// Emails the payslips of a locked payroll not yet sent, each to the employee's work email (or personal, if none): up
+    /// to <see cref="EmailBatch"/> a call, in order. Pass the result's Next as <paramref name="after"/> to carry on from
+    /// there, so payslips that fail don't hold up the rest; starting again without it retries them.
+    /// </summary>
+    public async Task<EmailPayslipsResult> EmailPayslipsAsync(Guid runId, Guid? after, CancellationToken ct)
     {
         var run = await RunAsync(runId, ct);
         if (run.Status != PayrollStatus.Locked) throw new DomainException("Lock the payroll before sending payslips.");
         if (run.Kind == PayrollRunKind.Reversal) throw new DomainException("Reversals don't have payslips to send.");
-        var slips = await db.Payslips.Where(p => p.RunId == runId).ToListAsync(ct);
+        var slips = (await db.Payslips.Where(p => p.RunId == runId).ToListAsync(ct)).OrderBy(s => s.EmployeeName, StringComparer.Ordinal).ThenBy(s => s.Id).ToList();
+        var start = after == null ? 0 : slips.FindIndex(s => s.Id == after) + 1;
+        if (after != null && start == 0) throw new NotFoundException("There is no such payslip in this payroll.");
         var ids = slips.Select(p => p.EmployeeId).ToList();
         var addresses = await db.Employees.AsNoTracking().Where(e => ids.Contains(e.Id))
             .ToDictionaryAsync(e => e.Id, e => e.WorkEmail ?? e.PersonalEmail, ct);
         var company = await db.CompanyProfiles.AsNoTracking().SingleAsync(ct);
         var noEmail = slips.Where(s => s.EmailedAt == null && addresses.GetValueOrDefault(s.EmployeeId) == null).Select(s => s.EmployeeName).Order().ToList();
-        var due = slips.Where(s => s.EmailedAt == null && addresses.GetValueOrDefault(s.EmployeeId) != null).OrderBy(s => s.EmployeeName).ToList();
-        var batch = due.Take(EmailBatch).ToList();
+        var due = slips.Skip(start).Where(s => s.EmailedAt == null && addresses.GetValueOrDefault(s.EmployeeId) != null).ToList();
+        var batch = due.Take(BatchSize).ToList();
         var failed = new List<string>();
         var messages = new List<EmailMessage>();
         foreach (var slip in batch)
@@ -102,22 +111,37 @@ public class PayrollOutputService(IAppDbContext db, ITenantContext tenantContext
                 $"Please keep it private. If anything looks wrong, contact HR.\n\n{company.TradingName ?? company.LegalName}",
                 [new EmailAttachment(FileName(slip, run), Pdf, pdf)]));
         }
+        var already = slips.Count(s => s.EmailedAt != null);
         var sent = 0;
-        var configured = await email.SendManyAsync(messages, async (i, error) =>
+        bool configured;
+        try
         {
-            if (error != null)
+            configured = await email.SendManyAsync(messages, async (i, error) =>
             {
-                logger.LogWarning(error, "Payslip email to employee {EmployeeId} failed.", batch[i].EmployeeId);
-                failed.Add(batch[i].EmployeeName);
-                return;
-            }
-            batch[i].MarkEmailed(clock.GetUtcNow());
-            sent++;
-            // Saved as it goes, so an interrupted batch never sends anyone theirs twice.
-            if (sent % 20 == 0) await db.SaveChangesAsync(ct);
-        }, ct);
-        await db.SaveChangesAsync(ct);
-        return new EmailPayslipsResult(sent, slips.Count(s => s.EmailedAt != null) - sent, noEmail, failed, configured, due.Count - sent);
+                if (error != null)
+                {
+                    logger.LogWarning(error, "Payslip email to employee {EmployeeId} failed.", batch[i].EmployeeId);
+                    failed.Add(batch[i].EmployeeName);
+                    return;
+                }
+                batch[i].MarkEmailed(clock.GetUtcNow());
+                sent++;
+                if (sent % 20 == 0) await db.SaveChangesAsync(CancellationToken.None);
+            }, ct);
+        }
+        catch (MailUnavailableException e)
+        {
+            logger.LogError(e, "Payslip emails stopped: the mail server is unavailable.");
+            throw new DomainException("The mail server can't be reached, so the remaining payslips weren't emailed. Try again later: " +
+                "those already sent won't be sent twice.");
+        }
+        finally
+        {
+            // Whatever stopped it (a closed browser, the server going away), what was sent stays marked as sent.
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        var left = due.Count - batch.Count;
+        return new EmailPayslipsResult(sent, already, noEmail, failed, configured, left, configured && left > 0 ? batch[^1].Id : null);
     }
 
     // Payment files

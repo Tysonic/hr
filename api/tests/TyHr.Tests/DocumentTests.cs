@@ -17,10 +17,16 @@ public class FakeEmail : IEmailSender
 {
     public List<EmailMessage> Sent { get; } = [];
     public bool Configured { get; set; } = true;
+    /// <summary>Addresses the server refuses.</summary>
+    public HashSet<string> Refused { get; } = [];
+    /// <summary>Runs before each send, e.g. to make the server go away.</summary>
+    public Action? BeforeSend { get; set; }
 
     public Task<bool> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
         if (!Configured) return Task.FromResult(false);
+        BeforeSend?.Invoke();
+        if (message.To.Any(Refused.Contains)) throw new InvalidOperationException("550 no such mailbox");
         Sent.Add(message);
         return Task.FromResult(true);
     }

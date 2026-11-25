@@ -27,12 +27,14 @@ public class PayrollOutputTests(PostgresFixture fx) : IClassFixture<PostgresFixt
         public ValueTask DisposeAsync() => Scope.DisposeAsync();
     }
 
+    private int _batch = PayrollOutputService.EmailBatch;
+
     private Services As(string tenant, string user, params string[] roles)
     {
         var scope = fx.NewScope(tenant, user: user, roles: roles, email: $"{user}@co.test");
         var access = new EmployeeAccess(scope.Db, scope.User);
         return new Services(scope, new PayrollService(scope.Db, scope.TenantContext, scope.User, fx.Clock),
-            new PayrollOutputService(scope.Db, scope.TenantContext, scope.User, access, new QuestPayslipRenderer(), _email, fx.Clock, NullLogger<PayrollOutputService>.Instance),
+            new PayrollOutputService(scope.Db, scope.TenantContext, scope.User, access, new QuestPayslipRenderer(), _email, fx.Clock, NullLogger<PayrollOutputService>.Instance) { BatchSize = _batch },
             new PayrollSetupService(scope.Db, scope.TenantContext, fx.Clock),
             new EmployeeService(scope.Db, scope.TenantContext, new PostgresDocumentNumbers(scope.Db), access, scope.User, fx.Clock));
     }
@@ -129,11 +131,11 @@ public class PayrollOutputTests(PostgresFixture fx) : IClassFixture<PostgresFixt
         var c = await LockedNovemberAsync(lockIt: false);
         await using (var paul = As(c.Tenant, "paul", Roles.PayrollOfficer))
         {
-            Assert.Contains("Lock", (await Assert.ThrowsAsync<DomainException>(() => paul.Outputs.EmailPayslipsAsync(c.Run, default))).Message);
+            Assert.Contains("Lock", (await Assert.ThrowsAsync<DomainException>(() => paul.Outputs.EmailPayslipsAsync(c.Run, null, default))).Message);
             await paul.Payroll.LockAsync(c.Run, default);
-            var result = await paul.Outputs.EmailPayslipsAsync(c.Run, default);
+            var result = await paul.Outputs.EmailPayslipsAsync(c.Run, null, default);
             Assert.Equal((2, 0, true, 0), (result.Sent, result.AlreadySent, result.MailConfigured, result.Remaining));
-            var again = await paul.Outputs.EmailPayslipsAsync(c.Run, default);
+            var again = await paul.Outputs.EmailPayslipsAsync(c.Run, null, default);
             Assert.Equal((0, 2), (again.Sent, again.AlreadySent));
         }
         var toAmina = _email.Sent.Single(m => m.To.Contains("amina@co.test"));
@@ -141,6 +143,53 @@ public class PayrollOutputTests(PostgresFixture fx) : IClassFixture<PostgresFixt
         var pdf = Assert.Single(toAmina.Attachments!);
         Assert.Equal("payslip-EMP-0001-2026-11.pdf", pdf.FileName);
         Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf.Content, 0, 4));
+    }
+
+    [Fact]
+    public async Task Payslips_that_cant_be_sent_dont_hold_up_the_rest_and_are_retried_next_time()
+    {
+        _batch = 1;
+        var c = await LockedNovemberAsync();
+        _email.Refused.Add("amina@co.test");
+        await using (var paul = As(c.Tenant, "paul", Roles.PayrollOfficer))
+        {
+            var first = await paul.Outputs.EmailPayslipsAsync(c.Run, null, default);
+            Assert.Equal((0, 1), (first.Sent, first.Remaining));
+            Assert.Equal("Amina Nakato", Assert.Single(first.Failed));
+            Assert.NotNull(first.Next);
+            var second = await paul.Outputs.EmailPayslipsAsync(c.Run, first.Next, default);
+            Assert.Equal((1, 0, null), (second.Sent, second.Remaining, second.Next));
+            Assert.Empty(second.Failed);
+            Assert.Equal("brian@co.test", Assert.Single(_email.Sent).To.Single());
+            await Assert.ThrowsAsync<NotFoundException>(() => paul.Outputs.EmailPayslipsAsync(c.Run, Guid.NewGuid(), default));
+        }
+        _email.Refused.Clear();
+        await using (var paul = As(c.Tenant, "paul", Roles.PayrollOfficer))
+        {
+            var retry = await paul.Outputs.EmailPayslipsAsync(c.Run, null, default);
+            Assert.Equal((1, 1, null), (retry.Sent, retry.AlreadySent, retry.Next));
+        }
+        Assert.Equal(["brian@co.test", "amina@co.test"], _email.Sent.Select(m => m.To.Single()));
+    }
+
+    [Fact]
+    public async Task Payslip_emails_stop_when_the_mail_server_goes_away_and_nobody_gets_theirs_twice()
+    {
+        var c = await LockedNovemberAsync();
+        _email.BeforeSend = () => { if (_email.Sent.Count == 1) throw new MailUnavailableException(new TimeoutException("no answer")); };
+        await using (var paul = As(c.Tenant, "paul", Roles.PayrollOfficer))
+            Assert.Contains("can't be reached", (await Assert.ThrowsAsync<DomainException>(() => paul.Outputs.EmailPayslipsAsync(c.Run, null, default))).Message);
+        // The same when the request is cut off (a closed browser) after one is sent.
+        _email.BeforeSend = () => throw new OperationCanceledException();
+        await using (var paul = As(c.Tenant, "paul", Roles.PayrollOfficer))
+            await Assert.ThrowsAsync<OperationCanceledException>(() => paul.Outputs.EmailPayslipsAsync(c.Run, null, default));
+        _email.BeforeSend = null;
+        await using (var paul = As(c.Tenant, "paul", Roles.PayrollOfficer))
+        {
+            var rest = await paul.Outputs.EmailPayslipsAsync(c.Run, null, default);
+            Assert.Equal((1, 1), (rest.Sent, rest.AlreadySent));
+        }
+        Assert.Equal(["amina@co.test", "brian@co.test"], _email.Sent.Select(m => m.To.Single()));
     }
 
     [Fact]

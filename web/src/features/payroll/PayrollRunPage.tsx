@@ -251,16 +251,19 @@ export const save = (path: string, fileName: string, query?: Record<string, stri
 function Outputs({ run: r }: { run: PayrollRun }) {
   const period = `${r.year}-${String(r.month).padStart(2, '0')}`
   const [progress, setProgress] = useState<{ sent: number; remaining: number } | null>(null)
-  // The API sends a batch per request; keep asking until everything with an address is sent, or a batch sends nothing.
+  // The API sends a batch per request; ask for the next until there are no more. Ones that fail are passed over.
   const sendAll = async () => {
     let total: EmailPayslipsResult | null = null
     try {
       for (;;) {
-        const x = await api.post<EmailPayslipsResult>(`/payroll/runs/${r.id}/email-payslips`)
-        total = total ? { ...x, sent: total.sent + x.sent, alreadySent: total.alreadySent, failed: [...new Set([...total.failed, ...x.failed])] } : x
+        const x: EmailPayslipsResult = await api.post(`/payroll/runs/${r.id}/email-payslips${total?.next ? `?after=${total.next}` : ''}`)
+        total = total ? { ...x, sent: total.sent + x.sent, alreadySent: total.alreadySent, failed: [...total.failed, ...x.failed] } : x
         setProgress({ sent: total.sent, remaining: x.remaining })
-        if (!x.mailConfigured || x.remaining === 0 || x.sent === 0) return total
+        if (!x.next) return total
       }
+    } catch (e) {
+      if (total?.sent && e instanceof Error) throw new Error(`${total.sent} payslips were emailed first. ${e.message}`)
+      throw e
     } finally {
       setProgress(null)
     }
@@ -269,7 +272,7 @@ function Outputs({ run: r }: { run: PayrollRun }) {
     invalidate: ['payroll'],
     success: (x) => !x.mailConfigured ? 'No mail server is set up, so nothing was sent.'
       : [`${x.sent} payslips emailed`, x.alreadySent && `${x.alreadySent} already sent`, x.noEmail.length && `${x.noEmail.length} without an email address (${x.noEmail.join(', ')})`,
-        x.failed.length && `${x.failed.length} failed`].filter(Boolean).join('; ') + '.',
+        x.failed.length && `${x.failed.length} couldn't be sent (${x.failed.slice(0, 5).join(', ')}${x.failed.length > 5 ? '…' : ''}); check their addresses and send again`].filter(Boolean).join('; ') + '.',
   })
   if (r.kind === 'Reversal') return null
   return (

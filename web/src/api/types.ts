@@ -567,7 +567,7 @@ export interface PayrollVariance {
   previousYear: number; previousMonth: number; previousGross: number; previousNet: number; gross: number; net: number; rows: VarianceRow[]
 }
 
-export interface EmailPayslipsResult { sent: number; alreadySent: number; noEmail: string[]; failed: string[]; mailConfigured: boolean; remaining: number }
+export interface EmailPayslipsResult { sent: number; alreadySent: number; noEmail: string[]; failed: string[]; mailConfigured: boolean; remaining: number; next: string | null }
 export interface MyPayslip { id: string; runName: string; year: number; month: number; payDate: string; gross: number; net: number; currencyCode: string }
 
 export type ProfileChangeKind = 'Personal' | 'Payment' | 'NextOfKin'

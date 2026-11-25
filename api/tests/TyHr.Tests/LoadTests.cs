@@ -98,12 +98,13 @@ public class LoadTests(PostgresFixture fx, ITestOutputHelper output) : IClassFix
         var emailed = await Time("Email every payslip (PDFs; the mail server is a fake)", 600, async () =>
         {
             var total = 0;
-            for (var batches = 0; ; batches++)
+            for (Guid? after = null; ;)
             {
-                var r = await outputs.EmailPayslipsAsync(run.Id, default);
+                var r = await outputs.EmailPayslipsAsync(run.Id, after, default);
                 total += r.Sent;
                 Assert.True(r.Sent <= PayrollOutputService.EmailBatch);
-                if (r.Remaining == 0 || r.Sent == 0) return total;
+                if (r.Next == null) return total;
+                after = r.Next;
             }
         });
         Assert.Equal(count, emailed);

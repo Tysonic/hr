@@ -31,4 +31,20 @@ public class SmtpTests
         Assert.Equal([6], results.Where(r => r.Item2 != null).Select(r => r.Item1));
         Assert.True(await sender.SendAsync(messages[0]));
     }
+
+    [Fact]
+    public async Task A_server_that_cant_be_reached_stops_the_batch_at_the_first_message()
+    {
+        // A port nothing listens on: taken, then released.
+        var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        IEmailSender sender = new SmtpEmailSender(Options.Create(new MailOptions { Host = "127.0.0.1", Port = port, Security = "None" }), NullLogger<SmtpEmailSender>.Instance);
+        var message = new EmailMessage(["a@smtp.test"], "Hi", "<p>Hi</p>", "Hi");
+        var tried = 0;
+        await Assert.ThrowsAsync<MailUnavailableException>(() => sender.SendManyAsync([message, message], (_, _) => { tried++; return Task.CompletedTask; }));
+        Assert.Equal(0, tried);
+        await Assert.ThrowsAsync<MailUnavailableException>(() => sender.SendAsync(message));
+    }
 }

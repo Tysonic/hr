@@ -45,26 +45,29 @@ public class SmtpEmailSender(IOptions<MailOptions> options, ILogger<SmtpEmailSen
         using var client = new SmtpClient { Timeout = 30_000, CheckCertificateRevocation = false };
         for (var i = 0; i < messages.Count; i++)
         {
+            if (!client.IsConnected) await ConnectAsync(client, o, cancellationToken);
             Exception? error = null;
-            try
-            {
-                if (!client.IsConnected)
-                {
-                    await client.ConnectAsync(o.Host, o.Port, o.Security switch
-                    {
-                        "None" => SecureSocketOptions.None,
-                        "Ssl" => SecureSocketOptions.SslOnConnect,
-                        _ => SecureSocketOptions.StartTls,
-                    }, cancellationToken);
-                    if (!string.IsNullOrEmpty(o.Username)) await client.AuthenticateAsync(o.Username, o.Password ?? "", cancellationToken);
-                }
-                await client.SendAsync(ToMime(messages[i], o), cancellationToken);
-            }
+            try { await client.SendAsync(ToMime(messages[i], o), cancellationToken); }
             catch (Exception e) when (e is not OperationCanceledException) { error = e; }
             await done(i, error);
         }
         if (client.IsConnected) await client.DisconnectAsync(true, cancellationToken);
         return true;
+    }
+
+    private static async Task ConnectAsync(SmtpClient client, MailOptions o, CancellationToken ct)
+    {
+        try
+        {
+            await client.ConnectAsync(o.Host!, o.Port, o.Security switch
+            {
+                "None" => SecureSocketOptions.None,
+                "Ssl" => SecureSocketOptions.SslOnConnect,
+                _ => SecureSocketOptions.StartTls,
+            }, ct);
+            if (!string.IsNullOrEmpty(o.Username)) await client.AuthenticateAsync(o.Username, o.Password ?? "", ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException) { throw new MailUnavailableException(e); }
     }
 
     private static MimeMessage ToMime(EmailMessage message, MailOptions o)
