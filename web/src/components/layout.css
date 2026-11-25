@@ -1,0 +1,289 @@
+/* The frame (sidebar and top bar), after Tycount's (my-biz/src/navigations/layout.css), so the two products look like
+   one family: white in light mode with a light-blue marker for where you are, near-black in dark with a gold one. */
+:root,
+[data-mantine-color-scheme='light'] {
+  --frame-bg: #fff;
+  --frame-text: #333;
+  --frame-text-strong: #000;
+  --frame-border: rgba(0, 0, 0, 0.12);
+  --frame-rule: transparent;
+  --frame-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  --frame-hover: rgba(0, 0, 0, 0.04);
+  --frame-open: rgba(0, 0, 0, 0.03);
+  --frame-btn-bg: #f8f9fa;
+  --frame-btn-border: #dee2e6;
+  --frame-brand: #0f4f99;
+  --frame-accent: #1f7ae0;
+  --frame-on-accent: #fff;
+  --frame-scrollbar: #ccc;
+  --frame-marker: #5aa9f5;
+  --frame-marker-bg: #eaf4fe;
+  --frame-marker-icon: #1f7ae0;
+}
+
+[data-mantine-color-scheme='dark'] {
+  --frame-bg: #0b0d10;
+  --frame-text: #c9cdd3;
+  --frame-text-strong: #fff;
+  --frame-border: rgba(255, 255, 255, 0.06);
+  --frame-rule: rgba(224, 184, 74, 0.35);
+  --frame-shadow: none;
+  --frame-hover: rgba(255, 255, 255, 0.06);
+  --frame-open: rgba(255, 255, 255, 0.04);
+  --frame-btn-bg: transparent;
+  --frame-btn-border: rgba(255, 255, 255, 0.2);
+  --frame-brand: #e0b84a;
+  --frame-accent: #e0b84a;
+  --frame-on-accent: #111;
+  --frame-scrollbar: #1e232a;
+  --frame-marker: #e0b84a;
+  --frame-marker-bg: rgba(224, 184, 74, 0.12);
+  --frame-marker-icon: #e0b84a;
+}
+
+.app-topbar {
+  background: var(--frame-bg);
+  color: var(--frame-text);
+  border-bottom: 1px solid var(--frame-rule);
+  box-shadow: var(--frame-shadow);
+}
+
+.frame-btn {
+  background: var(--frame-btn-bg);
+  border: 1px solid var(--frame-btn-border);
+  color: var(--frame-text);
+}
+
+.frame-btn:hover,
+.frame-btn:focus-visible {
+  background: var(--frame-btn-bg);
+  border-color: var(--frame-accent);
+  color: var(--frame-accent);
+}
+
+.app-sidebar {
+  background: var(--frame-bg);
+  color: var(--frame-text);
+  border-inline-end: 1px solid var(--frame-border);
+  overflow: hidden auto;
+  scrollbar-color: var(--frame-scrollbar) transparent;
+  scrollbar-width: thin;
+  transition: width 225ms ease, transform 225ms ease;
+}
+
+.app-sidebar-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex: none;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px 0 12px;
+  background: var(--frame-bg);
+  border-bottom: 1px solid var(--frame-rule);
+}
+
+.app-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--frame-brand);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.app-sidebar-brand:hover {
+  color: var(--frame-accent);
+}
+
+.app-sidebar-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--frame-accent);
+  color: var(--frame-on-accent);
+  font-size: 0.95rem;
+}
+
+.app-sidebar-menu {
+  padding: 8px 0;
+}
+
+.app-sidebar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 8px;
+}
+
+.app-sidebar-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  color: var(--frame-text);
+  font-size: 0.95rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.app-sidebar-link:hover {
+  background: var(--frame-hover);
+  color: var(--frame-text-strong);
+}
+
+.app-sidebar-link svg {
+  flex: none;
+}
+
+.app-sidebar-link > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Where you are. */
+.app-sidebar-link.active {
+  background: var(--frame-marker-bg);
+  color: var(--frame-text-strong);
+  font-weight: 600;
+}
+
+.app-sidebar-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--frame-marker);
+}
+
+.app-sidebar-link.active svg {
+  color: var(--frame-marker-icon);
+}
+
+.app-sidebar-badge {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.app-sidebar-section {
+  border: 0;
+}
+
+.app-sidebar-control {
+  padding: 0 1rem 0 1.5rem;
+  color: var(--frame-text);
+}
+
+.app-sidebar-control:hover {
+  background: var(--frame-hover);
+  color: var(--frame-text-strong);
+}
+
+.app-sidebar-control[data-active] {
+  background: var(--frame-open);
+  color: var(--frame-text-strong);
+}
+
+.app-sidebar-control[data-active] svg {
+  color: var(--frame-marker-icon);
+}
+
+/* Lines up with the links' labels. */
+.app-sidebar-icon {
+  margin-inline-end: 1rem;
+}
+
+.app-sidebar-control-label {
+  padding: 0.75rem 0;
+  font-size: 0.95rem;
+}
+
+.app-sidebar-panel {
+  padding: 0;
+}
+
+.app-sidebar-panel .app-sidebar-list {
+  padding: 8px;
+}
+
+/* Collapsed: icons only. The labels stay for screen readers, and show as tooltips. */
+.app-sidebar[data-rail] .app-sidebar-header {
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.app-sidebar[data-rail] .app-sidebar-list {
+  padding-inline: 4px;
+}
+
+.app-sidebar[data-rail] .app-sidebar-link {
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+
+.app-sidebar[data-rail] .app-sidebar-link > span,
+.app-sidebar[data-rail] .app-sidebar-control-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.app-sidebar[data-rail] .app-sidebar-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+
+.app-sidebar[data-rail] .app-sidebar-control {
+  position: relative;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0;
+}
+
+.app-sidebar[data-rail] .app-sidebar-icon {
+  margin-inline-end: 0;
+}
+
+.app-sidebar[data-rail] .app-sidebar-chevron {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar {
+    transition: none;
+  }
+}
+
+/* Printing a page: just the page. */
+@media print {
+  .app-topbar,
+  .app-sidebar {
+    display: none;
+  }
+
+  .app-main {
+    padding: 0;
+  }
+}

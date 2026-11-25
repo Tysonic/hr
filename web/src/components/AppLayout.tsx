@@ -1,37 +1,38 @@
 import {
-  ActionIcon, AppShell, Avatar, Badge, Burger, Group, Menu, NavLink, ScrollArea, Text, UnstyledButton,
+  ActionIcon, AppShell, Avatar, Badge, Group, Menu, Text, UnstyledButton,
   useComputedColorScheme, useMantineColorScheme,
 } from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
+import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import {
   IconAddressBook, IconBeach, IconCash, IconReceipt, IconClock, IconFileImport, IconUserCheck, IconBuildingSkyscraper, IconCalendarDue, IconCalendarMonth, IconChecklist, IconBuildings, IconHierarchy2, IconHistory, IconLayoutDashboard, IconLogout, IconMoon,
-  IconBriefcase, IconFileDescription, IconMessages, IconFileCertificate, IconListCheck, IconUserPlus, IconTargetArrow, IconChartBar, IconTrendingUp, IconDoorExit, IconArchive, IconReportAnalytics, IconRosetteDiscountCheck, IconListDetails, IconInbox, IconSitemap, IconSpeakerphone, IconSun, IconUserCircle, IconUsers, IconUsersGroup,
+  IconBriefcase, IconFileDescription, IconMessages, IconFileCertificate, IconListCheck, IconUserPlus, IconTargetArrow, IconChartBar, IconTrendingUp, IconDoorExit, IconArchive, IconReportAnalytics, IconRosetteDiscountCheck, IconListDetails, IconInbox, IconSitemap, IconSpeakerphone, IconSun, IconUserCircle, IconUsers, IconUsersGroup, IconMenu2, IconSettings, IconUserSearch, IconWorld,
 } from '@tabler/icons-react'
 import type { ReactNode } from 'react'
-import { Link, Outlet, useLocation } from 'react-router'
+import { Outlet } from 'react-router'
+import { Sidebar } from './Sidebar'
 import { signOut } from '../lib/auth'
 import { can, roleLabels, useMe, type Policy } from '../lib/permissions'
 import { useInbox, useMyInterviews, useMyTasks, scorecardsOwed } from '../features/me/hooks'
 import { useMyAppraisals } from '../features/performance/components'
 import { useMyClearance } from '../features/exits/components'
 
-type NavItem = { to: string; label: string; icon: ReactNode; exact?: boolean; policy?: Policy; badge?: 'inbox' | 'interviews' | 'tasks' | 'reviews' }
+type NavItem = { to: string; label: string; icon: ReactNode; policy?: Policy; badge?: 'inbox' | 'interviews' | 'tasks' | 'reviews' }
 
-// Each item shows only to users whose roles allow it; later milestones add more.
-const sections: { title?: string; items: NavItem[] }[] = [
-  {
-    items: [
-      { to: '/', label: 'Home', icon: <IconLayoutDashboard size={18} />, exact: true },
-      { to: '/me', label: 'My profile', icon: <IconUserCircle size={18} />, policy: 'selfService' },
-      { to: '/approvals', label: 'Approvals', icon: <IconInbox size={18} />, policy: 'inbox', badge: 'inbox' },
-      { to: '/reviews', label: 'My reviews', icon: <IconTargetArrow size={18} />, policy: 'selfService', badge: 'reviews' },
-      { to: '/tasks', label: 'My tasks', icon: <IconListCheck size={18} />, policy: 'selfService', badge: 'tasks' },
-      { to: '/interviews', label: 'My interviews', icon: <IconMessages size={18} />, policy: 'selfService', badge: 'interviews' },
-      { to: '/team', label: 'My team', icon: <IconUsersGroup size={18} />, policy: 'leaveApprove' },
-    ],
-  },
+// Each item shows only to users whose roles allow it, and a section only if it has any. The everyday items come first.
+const everyday: NavItem[] = [
+  { to: '/', label: 'Home', icon: <IconLayoutDashboard size={18} /> },
+  { to: '/me', label: 'My profile', icon: <IconUserCircle size={18} />, policy: 'selfService' },
+  { to: '/approvals', label: 'Approvals', icon: <IconInbox size={18} />, policy: 'inbox', badge: 'inbox' },
+  { to: '/reviews', label: 'My reviews', icon: <IconTargetArrow size={18} />, policy: 'selfService', badge: 'reviews' },
+  { to: '/tasks', label: 'My tasks', icon: <IconListCheck size={18} />, policy: 'selfService', badge: 'tasks' },
+  { to: '/interviews', label: 'My interviews', icon: <IconMessages size={18} />, policy: 'selfService', badge: 'interviews' },
+  { to: '/team', label: 'My team', icon: <IconUsersGroup size={18} />, policy: 'leaveApprove' },
+]
+
+const sections: { title: string; icon: ReactNode; items: NavItem[] }[] = [
   {
     title: 'People',
+    icon: <IconUsers size={18} />,
     items: [
       { to: '/employees', label: 'Employees', icon: <IconUsers size={18} />, policy: 'employeesView' },
       { to: '/reports', label: 'Reports', icon: <IconReportAnalytics size={18} />, policy: 'reportsView' },
@@ -48,29 +49,33 @@ const sections: { title?: string; items: NavItem[] }[] = [
   },
   {
     title: 'Recruitment',
+    icon: <IconUserSearch size={18} />,
     items: [
-      { to: '/recruitment', label: 'Jobs', icon: <IconBriefcase size={18} />, policy: 'recruitmentManage', exact: true },
+      { to: '/recruitment', label: 'Jobs', icon: <IconBriefcase size={18} />, policy: 'recruitmentManage' },
       { to: '/recruitment/requisitions', label: 'Requisitions', icon: <IconFileDescription size={18} />, policy: 'recruitmentRequest' },
     ],
   },
   {
     title: 'Leave',
+    icon: <IconBeach size={18} />,
     items: [
-      { to: '/leave', label: 'My leave', icon: <IconBeach size={18} />, policy: 'leaveView', exact: true },
+      { to: '/leave', label: 'My leave', icon: <IconBeach size={18} />, policy: 'leaveView' },
       { to: '/leave/approvals', label: 'Leave requests', icon: <IconChecklist size={18} />, policy: 'leaveApprove' },
       { to: '/leave/calendar', label: 'Leave calendar', icon: <IconCalendarMonth size={18} />, policy: 'leaveView' },
     ],
   },
   {
     title: 'Attendance',
+    icon: <IconClock size={18} />,
     items: [
-      { to: '/attendance', label: 'My attendance', icon: <IconClock size={18} />, policy: 'attendanceClock', exact: true },
+      { to: '/attendance', label: 'My attendance', icon: <IconClock size={18} />, policy: 'attendanceClock' },
       { to: '/attendance/team', label: 'Team attendance', icon: <IconUserCheck size={18} />, policy: 'attendanceView' },
       { to: '/attendance/import', label: 'Import punches', icon: <IconFileImport size={18} />, policy: 'attendanceManage' },
     ],
   },
   {
     title: 'Payroll',
+    icon: <IconCash size={18} />,
     items: [
       { to: '/payslips', label: 'My payslips', icon: <IconReceipt size={18} />, policy: 'payslipsOwn' },
       { to: '/payroll', label: 'Payrolls', icon: <IconCash size={18} />, policy: 'payrollView' },
@@ -78,10 +83,12 @@ const sections: { title?: string; items: NavItem[] }[] = [
   },
   {
     title: 'Platform',
+    icon: <IconWorld size={18} />,
     items: [{ to: '/platform/tenants', label: 'Companies', icon: <IconBuildings size={18} />, policy: 'platformTenants' }],
   },
   {
     title: 'Settings',
+    icon: <IconSettings size={18} />,
     items: [
       { to: '/settings/company', label: 'Company', icon: <IconBuildingSkyscraper size={18} />, policy: 'companyView' },
       { to: '/settings/organisation', label: 'Organisation', icon: <IconSitemap size={18} />, policy: 'orgView' },
@@ -97,8 +104,13 @@ const sections: { title?: string; items: NavItem[] }[] = [
 ]
 
 export function AppLayout() {
-  const [opened, { toggle, close }] = useDisclosure()
-  const { pathname } = useLocation()
+  // Like Tycount: open on a wide screen, icons only on a narrower one. On a phone it's a drawer, closed to start with.
+  const mobile = useMediaQuery('(max-width: 48em)', undefined, { getInitialValueInEffect: false })
+  const [wideOpen, wide] = useDisclosure(window.innerWidth > 1080)
+  const [drawerOpen, drawer] = useDisclosure()
+  const opened = mobile ? drawerOpen : wideOpen
+  const menu = mobile ? drawer : wide
+  const rail = !mobile && !wideOpen
   const { data: me } = useMe()
   const roles = me?.roles ?? []
   const { setColorScheme } = useMantineColorScheme()
@@ -111,24 +123,30 @@ export function AppLayout() {
   const clearance = useMyClearance(!!me?.company && can(roles, 'selfService'))
   const badges = { inbox: inbox.data?.total ?? 0, interviews: owed, tasks: (tasks.data ?? []).filter((t) => !t.isDone).length + (clearance.data ?? []).filter((i) => !i.isDone).length, reviews: reviews.data?.actionsDue ?? 0 }
 
-  const isActive = (item: NavItem) => (item.exact ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`))
-  const visible = sections
-    .map((s) => ({ ...s, items: s.items.filter((i) => (!i.policy || can(roles, i.policy)) && (i.to !== '/interviews' || !!interviews.data?.length) && (i.to !== '/tasks' || !!tasks.data?.length || !!clearance.data?.length)
-      && (i.to !== '/reviews' || !!(reviews.data?.mine.length || reviews.data?.team.length || reviews.data?.feedback.length || reviews.data?.myPlans))) }))
-    .filter((s) => s.items.length > 0)
+  const allowed = (items: NavItem[]) => items
+    .filter((i) => (!i.policy || can(roles, i.policy))
+      && (i.to !== '/interviews' || !!interviews.data?.length)
+      && (i.to !== '/tasks' || !!tasks.data?.length || !!clearance.data?.length)
+      && (i.to !== '/reviews' || !!(reviews.data?.mine.length || reviews.data?.team.length || reviews.data?.feedback.length || reviews.data?.myPlans)))
+    .map((i) => ({ ...i, badge: i.badge && badges[i.badge] }))
+  const visible = sections.map((s) => ({ ...s, items: allowed(s.items) })).filter((s) => s.items.length > 0)
 
   return (
-    <AppShell header={{ height: 56 }} navbar={{ width: 240, breakpoint: 'sm', collapsed: { mobile: !opened } }} padding={{ base: 'sm', sm: 'lg' }}>
-      <AppShell.Header>
+    <AppShell layout="alt" header={{ height: 64 }} navbar={{ width: rail ? 65 : 240, breakpoint: 'sm', collapsed: { mobile: !drawerOpen } }}
+      padding={{ base: 'sm', sm: 'lg' }} transitionDuration={225}>
+      <AppShell.Header className="app-topbar" withBorder={false}>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Group gap="sm" wrap="nowrap">
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Text fw={700} size="lg">TyHR</Text>
-            {me?.company && <Text size="sm" c="dimmed" visibleFrom="xs" truncate>{me.company.name}</Text>}
+          <Group gap="sm" wrap="nowrap" miw={0}>
+            {!opened && (
+              <ActionIcon className="frame-btn" variant="default" size="lg" aria-label="Open menu" onClick={menu.open}>
+                <IconMenu2 size={20} />
+              </ActionIcon>
+            )}
+            {me?.company && <Text fw={600} truncate>{me.company.name}</Text>}
           </Group>
           <Group gap="xs" wrap="nowrap">
             <UserMenu />
-            <ActionIcon variant="default" size="lg" aria-label="Toggle colour scheme"
+            <ActionIcon className="frame-btn" variant="default" size="lg" aria-label="Toggle colour scheme"
               onClick={() => setColorScheme(scheme === 'light' ? 'dark' : 'light')}>
               {scheme === 'light' ? <IconMoon size={18} /> : <IconSun size={18} />}
             </ActionIcon>
@@ -136,22 +154,11 @@ export function AppLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="xs">
-        <ScrollArea>
-          {visible.map((section, i) => (
-            <div key={i}>
-              {section.title && <Text size="xs" c="dimmed" fw={600} tt="uppercase" px="sm" mt="md" mb={4}>{section.title}</Text>}
-              {section.items.map((item) => (
-                <NavLink key={item.to} component={Link} to={item.to} label={item.label} leftSection={item.icon}
-                  rightSection={item.badge && badges[item.badge] ? <Badge size="sm" color="orange" circle>{badges[item.badge]}</Badge> : undefined}
-                  active={isActive(item)} onClick={close} />
-              ))}
-            </div>
-          ))}
-        </ScrollArea>
+      <AppShell.Navbar className="app-sidebar" withBorder={false} data-rail={rail || undefined}>
+        <Sidebar items={allowed(everyday)} sections={visible} rail={rail} onClose={menu.close} onNavigate={drawer.close} />
       </AppShell.Navbar>
 
-      <AppShell.Main>
+      <AppShell.Main className="app-main">
         <Outlet />
       </AppShell.Main>
     </AppShell>

@@ -94,6 +94,7 @@ M2, M3 (payroll) and M4 (self-service) are done. M5 (recruitment, hiring, onboar
 - `features/<area>/` holds pages and their forms. `api/types.ts` mirrors the DTOs, and `api/client.ts` adds problem-details messages, uploads and authenticated downloads.
 - Use `useApiMutation` (toasts, plus invalidating query keys by their first segment), `useCan('policy')` and the `PageHeader`/`Loading`/`LoadError` components.
 - Routes are lazy: add a page in `router.tsx` with `page(() => import(...), 'Name')`, and in `AppLayout`'s nav with its policy.
+- The menu (`components/Sidebar.tsx`, `layout.css`) follows Tycount's (`erp/my-biz/src/navigations`): everyday links, then one collapsible section per area, an icon rail when collapsed, and a drawer on phones. Keep its colours in the `--frame-*` variables. `lib/activeLink.ts` picks the one link to highlight.
 - Mantine `DateInput` values are `YYYY-MM-DD` strings. Turn empty strings into `null` before sending (`orNull`).
 
 ## Production
