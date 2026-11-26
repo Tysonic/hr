@@ -19,7 +19,7 @@ public class MailOptions
     public string From { get; set; } = "TyHR <no-reply@tyhr.local>";
 }
 
-/// <summary>Sends through the configured SMTP server with MailKit, like MyBiz's mail transport.</summary>
+/// <summary>Sends through the configured SMTP server with MailKit, like Tycount's mail transport.</summary>
 public class SmtpEmailSender(IOptions<MailOptions> options, ILogger<SmtpEmailSender> logger) : IEmailSender
 {
     public async Task<bool> SendAsync(EmailMessage message, CancellationToken cancellationToken = default)

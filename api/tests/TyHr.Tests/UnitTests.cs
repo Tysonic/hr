@@ -40,9 +40,9 @@ public class UnitTests
     }
 
     [Theory]
-    // A tyhr-api client role counts; MyBiz's roles don't.
-    [InlineData("""{"tyhr-api":{"roles":["hr-admin"]},"mybiz-web":{"roles":["employee"]}}""", """{"roles":["Admin"]}""", "demo", null, "hr-admin")]
-    [InlineData("""{"mybiz-web":{"roles":["hr-admin"]}}""", """{"roles":["hr-admin"]}""", "demo", null, "")]
+    // A tyhr-api client role counts; Tycount's roles don't.
+    [InlineData("""{"tyhr-api":{"roles":["hr-admin"]},"tycount-web":{"roles":["employee"]}}""", """{"roles":["Admin"]}""", "demo", null, "hr-admin")]
+    [InlineData("""{"tycount-web":{"roles":["hr-admin"]}}""", """{"roles":["hr-admin"]}""", "demo", null, "")]
     // The realm's PlatformAdmin becomes platform-admin, only for the operator's company when one is set.
     [InlineData(null, """{"roles":["PlatformAdmin"]}""", "tysoft", null, "platform-admin")]
     [InlineData(null, """{"roles":["PlatformAdmin"]}""", "tysoft", "tysoft", "platform-admin")]

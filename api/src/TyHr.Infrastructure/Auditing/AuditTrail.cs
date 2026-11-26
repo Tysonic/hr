@@ -9,7 +9,7 @@ using TyHr.Domain.Auditing;
 namespace TyHr.Infrastructure.Auditing;
 
 /// <summary>
-/// Adds an <see cref="AuditEntry"/> for every record a save creates, changes or deletes (adapted from MyBiz's
+/// Adds an <see cref="AuditEntry"/> for every record a save creates, changes or deletes (adapted from Tycount's
 /// AuditChangesInterceptor). Values of secrets and properties marked [NotAudited] are never kept, only that they
 /// changed. Entries are added to the same save, so the trail and the change commit together.
 /// </summary>

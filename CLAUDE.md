@@ -20,13 +20,13 @@ M2, M3 (payroll) and M4 (self-service) are done. M5 (recruitment, hiring, onboar
 
 - **Tenancy:**
   - Every company-owned entity derives from `TenantEntity`. A global query filter limits queries to the request's tenant, and `SaveChanges` stamps and guards the tenant, so never set or filter `Tenant` by hand.
-  - The tenant comes from the token's `tenant` claim (MyBiz's shared attribute). Platform admins have none.
+  - The tenant comes from the token's `tenant` claim (Tycount's shared attribute). Platform admins have none.
   - Background jobs set `ITenantContext.Tenant` themselves, in a scope per company; see `ReminderJob`.
 - **Permissions:**
   - Defined once in `Application/Common/Permissions.cs` as permission → roles. `web/src/lib/policies.ts` mirrors it; keep the two in sync.
   - The UI only hides things; the API enforces them.
   - Row-level and field-level visibility of employees lives in `EmployeeAccess`. Line managers see the reporting tree below the employee whose `WorkEmail` matches their sign-in email. Personal and pay sections come back null without permission.
-- **Roles:** HR roles are client roles on `tyhr-api`. Realm role `PlatformAdmin` maps to `platform-admin`. Keycloak changes go in `deploy/keycloak/tyhr-clients.json` and `setup.sh`, which must stay safe to re-run, because the realm belongs to MyBiz.
+- **Roles:** HR roles are client roles on `tyhr-api`. Realm role `PlatformAdmin` maps to `platform-admin`. Keycloak changes go in `deploy/keycloak/tyhr-clients.json` and `setup.sh`, which must stay safe to re-run, because the realm belongs to Tycount.
 - **Sensitive fields:**
   - Mark with `[Encrypted]`: AES-GCM through an EF value converter, keyed by `Secrets:Key`.
   - Encrypted fields are kept out of the audit trail, and can't be searched or compared in SQL.
@@ -94,13 +94,13 @@ M2, M3 (payroll) and M4 (self-service) are done. M5 (recruitment, hiring, onboar
 - `features/<area>/` holds pages and their forms. `api/types.ts` mirrors the DTOs, and `api/client.ts` adds problem-details messages, uploads and authenticated downloads.
 - Use `useApiMutation` (toasts, plus invalidating query keys by their first segment), `useCan('policy')` and the `PageHeader`/`Loading`/`LoadError` components.
 - Routes are lazy: add a page in `router.tsx` with `page(() => import(...), 'Name')`, and in `AppLayout`'s nav with its policy.
-- The menu (`components/Sidebar.tsx`, `layout.css`) follows Tycount's (`erp/my-biz/src/navigations`): everyday links, then one collapsible section per area, an icon rail when collapsed, and a drawer on phones. Keep its colours in the `--frame-*` variables. `lib/activeLink.ts` picks the one link to highlight.
+- The menu (`components/Sidebar.tsx`, `layout.css`) follows Tycount's (`erp/tycount-web/src/navigations`): everyday links, then one collapsible section per area, an icon rail when collapsed, and a drawer on phones. Keep its colours in the `--frame-*` variables. `lib/activeLink.ts` picks the one link to highlight.
 - Mantine `DateInput` values are `YYYY-MM-DD` strings. Turn empty strings into `null` before sending (`orNull`).
 
 ## Production
 
 - `docs/deploy.md` is the deploy guide; keep it in step with `docker-compose.prod.yml`, `deploy/` and new settings.
-- TyHR shares MyBiz's (Tycount's) server and borrows its Caddy, Keycloak and Postgres over the `tyhr-edge` network (`deploy/tycount.override.yml`, the website's pattern). Never edit MyBiz's repository for this.
+- TyHR shares Tycount's server and borrows its Caddy, Keycloak and Postgres over the `tyhr-edge` network (`deploy/tycount.override.yml`, the website's pattern). Never edit Tycount's repository for this.
 - Compose service names start with `tyhr-`, because Tycount's Caddy is on this network too and a service called `api` would take some of Tycount's traffic.
 - The API talks to Keycloak at `http://keycloak:8080`: Tycount's Caddy blocks `/admin` from outside, which invitations need.
 - `/etc/caddy/sites` can only be mounted once, so `deploy/caddy/sites/tysoft-website.caddy` re-imports the website's files. TyHR's override goes last in Tycount's `COMPOSE_FILE`.
@@ -114,6 +114,6 @@ M2, M3 (payroll) and M4 (self-service) are done. M5 (recruitment, hiring, onboar
 
 ## Don'ts
 
-- Don't edit the MyBiz realm by hand or change anything of MyBiz's. Go through `setup.sh` and TyHR's own clients.
+- Don't edit the tysoft-apps realm by hand or change anything of Tycount's. Go through `setup.sh` and TyHR's own clients.
 - Don't commit `*.local.txt`, `.env.prod` or `data/`.
-- Don't add Keycloak or a second auth realm to the compose files. Sign-in is MyBiz's Keycloak.
+- Don't add Keycloak or a second auth realm to the compose files. Sign-in is Tycount's Keycloak.

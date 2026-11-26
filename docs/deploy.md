@@ -1,8 +1,8 @@
 # Deploying TyHR
 
-TyHR goes on **Tycount's (MyBiz's) production server**, beside Tycount and the company website, and borrows three of
+TyHR goes on **Tycount's production server**, beside Tycount and the company website, and borrows three of
 Tycount's services. This guide covers the first deploy, updates, backups and restores, monitoring, and a security
-checklist. It assumes Tycount is already running as in its own guide, `/opt/mybiz/MyBiz/DEPLOY-PRODUCTION.md` (server
+checklist. It assumes Tycount is already running as in its own guide, `/opt/tycount/Tycount/DEPLOY-PRODUCTION.md` (server
 preparation, firewall, Docker, DNS and mail come from there).
 
 ## What runs where
@@ -12,7 +12,7 @@ preparation, firewall, Docker, DNS and mail come from there).
 | `tyhr-api` | TyHR | The .NET API. Applies database migrations when it starts. Nothing published. |
 | `tyhr-web` | TyHR | The React app as static files. Nothing published. |
 | Caddy | Tycount | The only public entrance: serves `https://<TYHR_DOMAIN>` from `deploy/caddy/sites/tyhr.caddy`. |
-| Keycloak | Tycount | Sign-in (realm `MyBiz`), shared so one sign-in covers both apps. |
+| Keycloak | Tycount | Sign-in (realm `tysoft-apps`), shared so one sign-in covers both apps. |
 | Postgres 17 | Tycount | Holds the `tyhr` database, owned by its own `tyhr` login. |
 
 They meet on the `tyhr-edge` Docker network, which TyHR's stack creates and `deploy/tycount.override.yml` connects
@@ -50,7 +50,7 @@ Tycount.
    | `TYHR_SECRETS_KEY` | yes | encrypts ID, bank and mobile-money numbers: `openssl rand -base64 32`. **Losing it makes those fields unreadable.** Keep a copy somewhere safe, apart from the backups. |
    | `AUTH_URL` | yes | Keycloak as browsers see it, e.g. `https://auth.tycount.tysoftltd.com` |
    | `KC_PROVISIONER_SECRET` | yes | from step 5 |
-   | `PLATFORM_TENANT` | no | MyBiz's operator company. Only its `PlatformAdmin`s become TyHR platform admins. |
+   | `PLATFORM_TENANT` | no | Tycount's operator company. Only its `PlatformAdmin`s become TyHR platform admins. |
    | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM` | no | outgoing mail (payslips, reminders, offers). Without `SMTP_HOST` nothing is sent, and reminders wait. `SMTP_SECURITY` is `StartTls` (587), `Ssl` (465) or `None`. |
 
 4. **Database.** `deploy/postgres/create-db.sh` creates the login and database in Tycount's Postgres. It's safe to re-run,
@@ -60,23 +60,23 @@ Tycount.
    can't read the tables, but it can list them). Close Tycount's to other logins; their owners keep access:
 
    ```sh
-   cd /opt/mybiz/MyBiz
-   docker compose exec -T postgres psql -U postgres -c 'REVOKE CONNECT ON DATABASE "MyBizDatabase", "efrisTestDb123", keycloak FROM PUBLIC'
+   cd /opt/tycount/Tycount
+   docker compose exec -T postgres psql -U postgres -c 'REVOKE CONNECT ON DATABASE tycount_db, efris_db, keycloak FROM PUBLIC'
    ```
 
 5. **Keycloak.** From `/opt/tyhr`:
 
    ```sh
-   KEYCLOAK_CONTAINER=$(cd /opt/mybiz/MyBiz && docker compose ps -q keycloak) \
+   KEYCLOAK_CONTAINER=$(cd /opt/tycount/Tycount && docker compose ps -q keycloak) \
      KEYCLOAK_URL=https://auth.<Tycount's domain> TYHR_DOMAIN=hr.tysoftltd.com deploy/keycloak/setup.sh
    ```
 
    - Tycount's bootstrap admin is gone, so it asks for your own Keycloak admin sign-in.
-   - It adds TyHR's clients and roles to the MyBiz realm, lets `tyhr-web` sign in at `https://<TYHR_DOMAIN>`, and prints
+   - It adds TyHR's clients and roles to the tysoft-apps realm, lets `tyhr-web` sign in at `https://<TYHR_DOMAIN>`, and prints
      the provisioner secret for `.env.prod`.
    - It's safe to re-run, and keeps the addresses already registered. Don't change the realm by hand.
    - Check that **Direct access grants are off** on `tyhr-web`.
-   - MyBiz's "own company only" sign-in steps check only the clients listed in their settings (`mybiz-web`). Don't add
+   - Tycount's "own company only" sign-in steps check only the clients listed in their settings (`tycount-web`). Don't add
      `tyhr-web` there: TyHR has one address for every company, so everyone would be refused.
 6. **Start TyHR** (this creates `tyhr-edge`):
 
@@ -86,7 +86,7 @@ Tycount.
 
    Until step 7 the API can't reach Postgres, so it keeps restarting. That's expected.
 7. **Connect Tycount's services**, at a quiet time and **after a Tycount backup**: this recreates its Caddy, Keycloak and
-   Postgres, and Tycount is unavailable for about a minute. In `/opt/mybiz/MyBiz/.env`, add TyHR's override to the
+   Postgres, and Tycount is unavailable for about a minute. In `/opt/tycount/Tycount/.env`, add TyHR's override to the
    **end** of `COMPOSE_FILE`, after the website's, and set `TYHR_DOMAIN` if it isn't `hr.tysoftltd.com`:
 
    ```sh
@@ -96,7 +96,7 @@ Tycount.
    Check first that Caddy will get TyHR's sites folder, with the website's beside it, and then apply:
 
    ```sh
-   cd /opt/mybiz/MyBiz
+   cd /opt/tycount/Tycount
    docker compose config | grep -A1 'source: /opt/ty'   # .../tyhr/deploy/caddy/sites and .../tysoft-website/deploy/caddy
    docker compose up -d caddy keycloak postgres
    docker compose logs -f caddy                         # "certificate obtained successfully" for TyHR's domain
@@ -109,7 +109,7 @@ Tycount.
    - `curl https://<TYHR_DOMAIN>/api/health` should return `{"status":"ok"}`.
    - Tycount (a company address and sign-in) and the website still load.
 9. **First company.** Sign in as a platform admin, go to Platform → Companies, and add the company with its HR admin's
-   email. The HR admin is invited by email to set a password, unless they already have a MyBiz sign-in in the same company.
+   email. The HR admin is invited by email to set a password, unless they already have a Tycount sign-in in the same company.
 10. **Backups.** Set them up now, before anyone enters data (next section).
 
 If TyHR is ever removed from the server, take its override out of Tycount's `COMPOSE_FILE` (and recreate the three
@@ -172,7 +172,7 @@ curl https://<TYHR_DOMAIN>/api/health
 ```
 
 If `deploy/caddy/sites/` changed, also reload Caddy:
-`cd /opt/mybiz/MyBiz && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`.
+`cd /opt/tycount/Tycount && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`.
 
 Migrations run automatically when the API starts. If an update goes wrong:
 1. Check out the previous version and run `up -d --build` again.
@@ -197,7 +197,7 @@ Migrations run automatically when the API starts. If an update goes wrong:
   it (`REVOKE CONNECT`, first deploy step 4).
 - **Settings file:** `.env.prod` is `chmod 600`, owned by root, and not in git.
 - **Secrets key:** `TYHR_SECRETS_KEY` and the backup passphrase are stored apart from the backups.
-- **Keycloak:** direct access grants are off on `tyhr-web`, and only MyBiz's operator company is set as
+- **Keycloak:** direct access grants are off on `tyhr-web`, and only Tycount's operator company is set as
   `PLATFORM_TENANT`.
 - **SMTP:** the mail account is used only by TyHR, with SPF/DKIM set up for `MAIL_FROM`'s domain.
 - **Updates:** OS security updates are on (e.g. `unattended-upgrades`). Rebuild with `--pull` monthly to pick up base

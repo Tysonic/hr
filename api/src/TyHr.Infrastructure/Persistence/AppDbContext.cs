@@ -20,7 +20,7 @@ namespace TyHr.Infrastructure.Persistence;
 
 /// <summary>
 /// One shared database for every company. Each <see cref="ITenantOwned"/> entity gets the query filter
-/// <c>e.Tenant == CurrentTenant</c> (ported from MyBiz's TenantDbContext), so a request only ever reads its own
+/// <c>e.Tenant == CurrentTenant</c> (ported from Tycount's TenantDbContext), so a request only ever reads its own
 /// company's rows; with no tenant (a platform admin) it reads none. Saving stamps the request's tenant on new rows,
 /// refuses to touch another company's rows, and writes the audit trail in the same transaction.
 /// </summary>

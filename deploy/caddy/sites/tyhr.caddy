@@ -1,5 +1,5 @@
 # TyHR's public address, served by Tycount's Caddy on the shared server (docs/deploy.md). After changing it, from
-# /opt/mybiz/MyBiz:  docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+# /opt/tycount/Tycount:  docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 #   https://<TYHR_DOMAIN>   the web app; /api/* -> the API
 # The certificate is Let's Encrypt over HTTP, for this host name only.
 {$TYHR_DOMAIN:hr.tysoftltd.com} {

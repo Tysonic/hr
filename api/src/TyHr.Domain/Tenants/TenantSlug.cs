@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace TyHr.Domain.Tenants;
 
 /// <summary>
-/// Rules for a company's tenant slug (from MyBiz's TenantName). The slug doubles as the company's subdomain
+/// Rules for a company's tenant slug (from Tycount's TenantName). The slug doubles as the company's subdomain
 /// (&lt;slug&gt;.&lt;app domain&gt;) and is the "tenant" claim in its users' access tokens, so it must be a valid DNS
 /// label and must not clash with hostnames the platform itself uses.
 /// </summary>

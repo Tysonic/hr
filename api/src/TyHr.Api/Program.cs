@@ -45,7 +45,7 @@ if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
-// Sign-in is through the shared Tysoft Keycloak realm (MyBiz's), so one sign-in covers MyBiz and TyHR; the API
+// Sign-in is through the shared Tysoft Keycloak realm (Tycount's), so one sign-in covers Tycount and TyHR; the API
 // accepts access tokens issued for tyhr-api. See deploy/keycloak/setup.sh.
 var auth = builder.Configuration.GetSection("Auth");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

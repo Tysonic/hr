@@ -3,10 +3,10 @@
 # TYHR_DB_PASSWORD from .env.prod. Nothing else in that Postgres is touched. Safe to run again: it creates what's
 # missing and sets the login's password to the one in .env.prod.
 #   deploy/postgres/create-db.sh
-# Settings: TYCOUNT_DIR, Tycount's checkout (default /opt/mybiz/MyBiz); ENV_FILE (default .env.prod).
+# Settings: TYCOUNT_DIR, Tycount's checkout (default /opt/tycount/Tycount); ENV_FILE (default .env.prod).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-TYCOUNT_DIR="${TYCOUNT_DIR:-/opt/mybiz/MyBiz}"
+TYCOUNT_DIR="${TYCOUNT_DIR:-/opt/tycount/Tycount}"
 ENV_FILE="${ENV_FILE:-.env.prod}"
 [ -f "$ENV_FILE" ] || { echo "No $ENV_FILE in $(pwd)." >&2; exit 1; }
 DB_PASSWORD="$(sed -n 's/^TYHR_DB_PASSWORD=//p' "$ENV_FILE" | tail -1)"

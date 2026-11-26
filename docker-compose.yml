@@ -1,7 +1,7 @@
 # Local development services. The API and web app run on the host (dotnet run / npm run dev); see README.md.
 # Postgres is the shared Tysoft development server (localhost:5432), not started here: deploy/postgres/setup-dev.sh
-# creates TyHR's database on it. Other ports are offset from the other Tysoft products (sacco, MyBiz) so their stacks can run side by side.
-# Sign-in uses MyBiz's Keycloak (shared realm "MyBiz", http://localhost:8082): cd ../erp/MyBiz && docker compose up -d keycloak,
+# creates TyHR's database on it. Other ports are offset from the other Tysoft products (sacco, Tycount) so their stacks can run side by side.
+# Sign-in uses Tycount's Keycloak (shared realm "tysoft-apps", http://localhost:8082): cd ../erp/Tycount && docker compose up -d keycloak,
 # then deploy/keycloak/setup.sh --dev-users.
 name: tyhr
 

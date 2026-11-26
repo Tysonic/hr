@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Adds TyHR to the shared Tysoft Keycloak realm (MyBiz's), so people sign in once for MyBiz and TyHR.
-# It only adds TyHR's own clients and roles (tyhr-clients.json); it never changes the realm's settings or MyBiz's
-# clients. Users carry one "tenant" attribute (their company) for every app: a company's TyHR code is its MyBiz code.
+# Adds TyHR to the shared Tysoft Keycloak realm (Tycount's), so people sign in once for Tycount and TyHR.
+# It only adds TyHR's own clients and roles (tyhr-clients.json); it never changes the realm's settings or Tycount's
+# clients. Users carry one "tenant" attribute (their company) for every app: a company's TyHR code is its Tycount code.
 #
 #   deploy/keycloak/setup.sh               # clients tyhr-api (holds the TyHR roles), tyhr-web, tyhr-provisioner
 #   deploy/keycloak/setup.sh --dev-users   # also a platform admin and one "demo" company user per TyHR role
 #                                          # (passwords -> deploy/keycloak/dev-users.local.txt)
 #
-# Runs against a Keycloak container on this machine: locally MyBiz's (cd erp/MyBiz && docker compose up -d keycloak).
+# Runs against a Keycloak container on this machine: locally Tycount's (cd erp/Tycount && docker compose up -d keycloak).
 # On the production server set KEYCLOAK_CONTAINER, KEYCLOAK_URL=https://auth.<domain> and TYHR_DOMAIN (TyHR's address,
 # e.g. hr.tysoftltd.com, where tyhr-web may sign in), and copy the printed provisioner secret into TyHR's
 # KC_PROVISIONER_SECRET. Safe to re-run: existing roles, passwords and tyhr-web's addresses are kept.
 set -euo pipefail
 
-CONTAINER="${KEYCLOAK_CONTAINER:-mybiz-keycloak-1}"
+CONTAINER="${KEYCLOAK_CONTAINER:-tycount-keycloak-1}"
 URL="${KEYCLOAK_URL:-http://localhost:8082}"
-REALM="${KEYCLOAK_REALM:-MyBiz}"
+REALM="${KEYCLOAK_REALM:-tysoft-apps}"
 API_CLIENT=tyhr-api
 PLATFORM_ROLE="${PLATFORM_ADMIN_ROLE:-PlatformAdmin}"   # the realm's existing platform-operator role
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -34,7 +34,7 @@ case "$TYHR_DOMAIN" in *[!A-Za-z0-9.-]*) echo "TYHR_DOMAIN is a bare host name, 
 kc() { docker exec -i "$CONTAINER" /opt/keycloak/bin/kcadm.sh "$@" --config /tmp/kcadm.config; }
 
 if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" != "true" ]; then
-  echo "Keycloak container $CONTAINER is not running. Locally: cd ../erp/MyBiz && docker compose up -d keycloak" >&2
+  echo "Keycloak container $CONTAINER is not running. Locally: cd ../erp/Tycount && docker compose up -d keycloak" >&2
   exit 1
 fi
 for _ in $(seq 90); do curl -sf -o /dev/null "$URL/realms/$REALM" && break; sleep 2; done
@@ -116,7 +116,7 @@ if [ "${1:-}" = "--dev-users" ]; then
       kc update "users/$id" -r "$REALM" -f - <<< "{\"username\":\"$user\",\"email\":\"$user@tyhr.test\",\"firstName\":\"$first\",\"lastName\":\"One\",\"attributes\":{\"tenant\":[\"$tenant\"]}}"
     fi
     password="$(printf '%s\n' "$previous" | awk -v u="$user" '$1 == u { print $2 }')"
-    # A new one meets the realm's password policy (MyBiz's needs upper, lower, digit and a special character).
+    # A new one meets the realm's password policy (Tycount's needs upper, lower, digit and a special character).
     case "$password" in *[!A-Za-z0-9]*) ;; *) password="$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-12)-Aa1" ;; esac
     docker exec -e PW="$password" "$CONTAINER" sh -c \
       "/opt/keycloak/bin/kcadm.sh set-password --config /tmp/kcadm.config -r $REALM --username $user --new-password \"\$PW\""

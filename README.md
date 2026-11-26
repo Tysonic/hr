@@ -22,7 +22,7 @@ statutory payroll rules.
 
 - **API:** .NET 10, ASP.NET Core, EF Core 10 on PostgreSQL 17, MailKit and ClosedXML. The code is in four layers: `Domain`, `Application`, `Infrastructure` and `Api`.
 - **Web:** React 19, TypeScript, Vite 8, Mantine 9, TanStack Query and react-router.
-- **Sign-in:** MyBiz's Keycloak, in the shared `MyBiz` realm, so one login works across Tysoft products. TyHR has its own clients (`tyhr-web`, `tyhr-api`, `tyhr-provisioner`) and roles. A user's company comes from their `tenant` attribute, the same one MyBiz uses.
+- **Sign-in:** Tycount's Keycloak, in the shared `tysoft-apps` realm, so one login works across Tysoft products. TyHR has its own clients (`tyhr-web`, `tyhr-api`, `tyhr-provisioner`) and roles. A user's company comes from their `tenant` attribute, the same one Tycount uses.
 - **Tests:** xUnit with Testcontainers (a real Postgres in Docker) for the API, and vitest for the web.
 
 ## Running it locally
@@ -31,14 +31,14 @@ You need:
 - the .NET 10 SDK;
 - Node 22.12 or later (`nvm install` reads `web/.nvmrc`);
 - Docker;
-- MyBiz's repository next to this one (`../erp/MyBiz`), for Keycloak;
+- Tycount's repository next to this one (`../erp/Tycount`), for Keycloak;
 - the shared Tysoft Postgres 17 container running (`postgres_container`; set `PG_CONTAINER` if yours is named differently).
 
 ```sh
-# 1. Keycloak (MyBiz's), on http://localhost:8082
-(cd ../erp/MyBiz && docker compose up -d keycloak)
+# 1. Keycloak (Tycount's), on http://localhost:8082
+(cd ../erp/Tycount && docker compose up -d keycloak)
 
-# 2. TyHR's clients, roles and dev users in the MyBiz realm (safe to re-run).
+# 2. TyHR's clients, roles and dev users in the tysoft-apps realm (safe to re-run).
 #    Saves the provisioner secret to the API's user-secrets and the users' passwords to deploy/keycloak/dev-users.local.txt.
 deploy/keycloak/setup.sh --dev-users
 
@@ -65,7 +65,7 @@ Sign in at http://localhost:5174 with one of the dev users in `deploy/keycloak/d
 | `employee1` | Employee | the directory and org chart |
 | `platform1` | Platform admin | all companies (Platform → Companies) |
 
-Ports are offset from sacco and MyBiz so all three stacks can run together:
+Ports are offset from sacco and Tycount so all three stacks can run together:
 
 | Service | Port |
 |---|---|
@@ -74,9 +74,9 @@ Ports are offset from sacco and MyBiz so all three stacks can run together:
 | Postgres (shared) | 5432 |
 | Mailpit SMTP | 1025 |
 | Mailpit UI | 8025 |
-| Keycloak (MyBiz) | 8082 |
+| Keycloak (Tycount) | 8082 |
 
-Uploaded documents go to `data/files/`, which isn't committed. TyHR's own emails, such as expiry reminders, land in Mailpit. Keycloak's emails, such as invitations, go through the MyBiz realm's SMTP settings. Until those are configured, inviting someone who has no account fails cleanly, and nothing is created.
+Uploaded documents go to `data/files/`, which isn't committed. TyHR's own emails, such as expiry reminders, land in Mailpit. Keycloak's emails, such as invitations, go through the tysoft-apps realm's SMTP settings. Until those are configured, inviting someone who has no account fails cleanly, and nothing is created.
 
 ## Tests and checks
 
@@ -89,7 +89,7 @@ CI (`.github/workflows/ci.yml`) runs these checks and builds the production imag
 
 ## Production
 
-TyHR runs on MyBiz's (Tycount's) production server. `docker-compose.prod.yml` is just the API and the web app; Caddy,
+TyHR runs on Tycount's production server. `docker-compose.prod.yml` is just the API and the web app; Caddy,
 Keycloak and Postgres are Tycount's, connected by `deploy/tycount.override.yml`.
 
 [docs/deploy.md](docs/deploy.md) is the guide: first deploy and settings, backups (`deploy/backup.sh`) and restores

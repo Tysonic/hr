@@ -1,8 +1,8 @@
 # Used by the TYCOUNT stack, not this one: lets Tycount's Caddy serve TyHR, Tycount's Keycloak sign its users in, and
 # Tycount's Postgres hold its database (its own login and database). On the server, add it LAST to COMPOSE_FILE in
-# /opt/mybiz/MyBiz/.env, after the company website's:
+# /opt/tycount/Tycount/.env, after the company website's:
 #   COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml:/opt/tysoft-website/deploy/tycount-caddy.override.yml:/opt/tyhr/deploy/tycount.override.yml
-# Then, from /opt/mybiz/MyBiz: docker compose up -d caddy keycloak postgres   (recreates them; see docs/deploy.md)
+# Then, from /opt/tycount/Tycount: docker compose up -d caddy keycloak postgres   (recreates them; see docs/deploy.md)
 #
 # Start TyHR's stack first: it creates the tyhr-edge network this file joins.
 #

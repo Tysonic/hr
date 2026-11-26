@@ -13,7 +13,7 @@ public class KeycloakOptions
 {
     /// <summary>Keycloak's base URL as the API reaches it, e.g. http://localhost:8082.</summary>
     public string BaseUrl { get; set; } = "http://localhost:8082";
-    public string Realm { get; set; } = "MyBiz";
+    public string Realm { get; set; } = "Tycount";
 
     /// <summary>Confidential client with the realm-management manage-users role (deploy/keycloak/setup.sh).</summary>
     public string ProvisionerClientId { get; set; } = "tyhr-provisioner";
@@ -28,7 +28,7 @@ public class KeycloakOptions
 }
 
 /// <summary>
-/// Gives company users TyHR access through the Keycloak admin REST API, in the realm TyHR shares with MyBiz. A new
+/// Gives company users TyHR access through the Keycloak admin REST API, in the realm TyHR shares with Tycount. A new
 /// user is created with the admin-only "tenant" attribute (their token's tenant claim) and a tyhr-api client role, and
 /// emailed a link to set a password; if a later step fails they are deleted again, so a failed invite leaves nothing
 /// behind. Someone who already has an account for the same company just gets the role.
@@ -47,7 +47,7 @@ public class KeycloakProvisioner(HttpClient http, IOptions<KeycloakOptions> opti
         var token = await GetTokenAsync(cancellationToken);
         var (clientUuid, roleRepresentation) = await FindRoleAsync(role, token, cancellationToken);
 
-        // The realm is shared with MyBiz: someone who already signs in there for this company is given the TyHR role
+        // The realm is shared with Tycount: someone who already signs in there for this company is given the TyHR role
         // on that same account, so they keep one password and sign in once for both apps.
         if (await FindUserAsync(email, token, cancellationToken) is { } existing)
         {

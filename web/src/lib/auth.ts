@@ -1,9 +1,9 @@
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts'
 
-// Sign-in is through the shared Tysoft Keycloak realm "MyBiz" (one sign-in for MyBiz and TyHR), public client
+// Sign-in is through the shared Tysoft Keycloak realm "tysoft-apps" (one sign-in for Tycount and TyHR), public client
 // "tyhr-web", code flow with PKCE.
 // Defaults suit local development; see .env.development and deploy/keycloak/setup.sh.
-const authority = import.meta.env.VITE_OIDC_AUTHORITY ?? 'http://localhost:8082/realms/MyBiz'
+const authority = import.meta.env.VITE_OIDC_AUTHORITY ?? 'http://localhost:8082/realms/tysoft-apps'
 const clientId = import.meta.env.VITE_OIDC_CLIENT_ID ?? 'tyhr-web'
 
 export const userManager = new UserManager({

@@ -5,7 +5,7 @@ namespace TyHr.Infrastructure.Persistence;
 
 /// <summary>
 /// Document numbers per company (PREFIX-0001), counted in the "Sequences" table keyed by (Tenant, Prefix)
-/// (ported from MyBiz's DocumentNumbers). Taken inside the caller's transaction: the counter row stays locked until
+/// (ported from Tycount's DocumentNumbers). Taken inside the caller's transaction: the counter row stays locked until
 /// it ends, so two saves can't get the same number, and a rolled-back save gives its number back.
 /// </summary>
 public class PostgresDocumentNumbers(AppDbContext db) : IDocumentNumbers

@@ -8,7 +8,7 @@ set -euo pipefail
 
 TYHR_COMPOSE_FILE=${TYHR_COMPOSE_FILE:-docker-compose.prod.yml}
 ENV_FILE=${ENV_FILE:-.env.prod}
-TYCOUNT_DIR=${TYCOUNT_DIR:-/opt/mybiz/MyBiz}
+TYCOUNT_DIR=${TYCOUNT_DIR:-/opt/tycount/Tycount}
 compose() { docker compose -f "$TYHR_COMPOSE_FILE" --env-file "$ENV_FILE" "$@"; }
 # In Tycount's Postgres container (its own .env sets its COMPOSE_FILE).
 pg() { (cd "$TYCOUNT_DIR" && env -u COMPOSE_FILE -u COMPOSE_PROJECT_NAME docker compose exec -T postgres "$@"); }

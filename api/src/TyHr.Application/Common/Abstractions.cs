@@ -110,7 +110,7 @@ public interface IIdentityProvisioner
 {
     /// <summary>
     /// Gives <paramref name="email"/> the TyHR role for <paramref name="tenant"/>: a new user is created and emailed a
-    /// link to set a password; an existing user of the same company (e.g. from MyBiz, which shares the realm) just gets
+    /// link to set a password; an existing user of the same company (e.g. from Tycount, which shares the realm) just gets
     /// the role. Fails for an existing user of another company. Returns the identity provider's user id.
     /// </summary>
     Task<string> InviteUserAsync(string tenant, string email, string firstName, string lastName, string role, CancellationToken cancellationToken = default);

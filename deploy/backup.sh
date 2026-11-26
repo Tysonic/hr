@@ -8,7 +8,7 @@
 #   BACKUP_DIR              where backups go (default: ./backups). Copy them off the server too; see docs/deploy.md.
 #   BACKUP_KEEP_DAYS        backups older than this are removed from BACKUP_DIR (default: 14).
 #   BACKUP_PASSPHRASE_FILE  if set, each backup is encrypted with the passphrase in this file (openssl AES-256).
-#   TYCOUNT_DIR             Tycount's checkout, whose Postgres holds the database (default: /opt/mybiz/MyBiz).
+#   TYCOUNT_DIR             Tycount's checkout, whose Postgres holds the database (default: /opt/tycount/Tycount).
 #   TYHR_COMPOSE_FILE, ENV_FILE  default: docker-compose.prod.yml and .env.prod.
 #
 # Not included, on purpose: .env.prod. It holds TYHR_SECRETS_KEY, without which the encrypted ID and bank numbers in
@@ -18,7 +18,7 @@ umask 077   # backups hold everyone's pay: only this user may read them, from th
 
 TYHR_COMPOSE_FILE=${TYHR_COMPOSE_FILE:-docker-compose.prod.yml}
 ENV_FILE=${ENV_FILE:-.env.prod}
-TYCOUNT_DIR=${TYCOUNT_DIR:-/opt/mybiz/MyBiz}
+TYCOUNT_DIR=${TYCOUNT_DIR:-/opt/tycount/Tycount}
 BACKUP_DIR=${BACKUP_DIR:-./backups}
 BACKUP_KEEP_DAYS=${BACKUP_KEEP_DAYS:-14}
 compose() { docker compose -f "$TYHR_COMPOSE_FILE" --env-file "$ENV_FILE" "$@"; }

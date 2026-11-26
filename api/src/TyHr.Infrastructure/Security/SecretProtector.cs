@@ -13,7 +13,7 @@ public class SecretsOptions
 }
 
 /// <summary>
-/// Encrypts values before they are stored, with AES-GCM and a 32-byte key from config (ported from MyBiz's
+/// Encrypts values before they are stored, with AES-GCM and a 32-byte key from config (ported from Tycount's
 /// SecretProtector), so the database alone does not give them away. Stored form: "v1:" + base64(nonce, ciphertext,
 /// tag). Values stored before encryption have no prefix and come back as they are.
 /// </summary>

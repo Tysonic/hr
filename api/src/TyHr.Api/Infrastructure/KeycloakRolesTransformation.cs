@@ -13,11 +13,11 @@ public class RoleOptions
     /// <summary>The client holding TyHR's company roles: "resource_access": { "tyhr-api": { "roles": [...] } }.</summary>
     public string ApiClientId { get; set; } = "tyhr-api";
 
-    /// <summary>The realm role of the people who run the Tysoft platform (MyBiz's), which TyHR treats as platform-admin.</summary>
+    /// <summary>The realm role of the people who run the Tysoft platform (Tycount's), which TyHR treats as platform-admin.</summary>
     public string PlatformAdminRealmRole { get; set; } = "PlatformAdmin";
 
     /// <summary>
-    /// The operator's own company, as in MyBiz's Platform:Tenant: the platform role only counts for users whose tenant
+    /// The operator's own company, as in Tycount's Platform:Tenant: the platform role only counts for users whose tenant
     /// is this one (or who have none). Empty means anywhere.
     /// </summary>
     public string? PlatformTenant { get; set; }
@@ -27,7 +27,7 @@ public class RoleOptions
 /// Keycloak puts client roles in a JSON claim, "resource_access": { "tyhr-api": { "roles": [ ... ] } }, and realm roles
 /// in "realm_access": { "roles": [ ... ] }. This adds TyHR's roles as role claims so [Authorize(Policy)] and IsInRole
 /// work: each tyhr-api client role as itself, and the realm's platform role as platform-admin. Other apps' roles
-/// (MyBiz's Admin...) are ignored.
+/// (Tycount's Admin...) are ignored.
 /// </summary>
 public class KeycloakRolesTransformation(IOptions<RoleOptions> options) : IClaimsTransformation
 {

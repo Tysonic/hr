@@ -1,4 +1,4 @@
-/* The frame (sidebar and top bar), after Tycount's (my-biz/src/navigations/layout.css), so the two products look like
+/* The frame (sidebar and top bar), after Tycount's (tycount-web/src/navigations/layout.css), so the two products look like
    one family: white in light mode with a light-blue marker for where you are, near-black in dark with a gold one. */
 :root,
 [data-mantine-color-scheme='light'] {

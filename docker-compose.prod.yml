@@ -1,10 +1,10 @@
-# Production, on the server TyHR shares with Tycount (MyBiz); see docs/deploy.md:
+# Production, on the server TyHR shares with Tycount; see docs/deploy.md:
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 # Required variables: TYHR_DOMAIN, TYHR_DB_PASSWORD, TYHR_SECRETS_KEY, AUTH_URL, KC_PROVISIONER_SECRET.
 #
 # TyHR borrows three of Tycount's services, which join the "tyhr-edge" network through deploy/tycount.override.yml:
 # - Caddy is the one public entrance (deploy/caddy/sites/tyhr.caddy).
-# - Keycloak signs people in (realm MyBiz).
+# - Keycloak signs people in (realm tysoft-apps).
 # - Postgres holds TyHR's database: "tyhr", owned by its own "tyhr" login (deploy/postgres/create-db.sh).
 # This stack is only TyHR's two containers, and nothing is published.
 #
@@ -31,13 +31,13 @@ services:
       Database__MigrateOnStartup: "true"
       # Tycount's Keycloak over tyhr-edge: Tycount's Caddy doesn't let the admin API (used for invitations) through
       # from outside. Tokens still name the public address as their issuer, which Keycloak itself reports here.
-      Auth__Authority: http://keycloak:8080/realms/MyBiz
+      Auth__Authority: http://keycloak:8080/realms/tysoft-apps
       Auth__RequireHttpsMetadata: "false"
       Auth__Audience: tyhr-api
-      # MyBiz's operator company: its PlatformAdmin role only counts for that company's users. Empty = anywhere.
+      # Tycount's operator company: its PlatformAdmin role only counts for that company's users. Empty = anywhere.
       Auth__PlatformTenant: ${PLATFORM_TENANT:-}
       Keycloak__BaseUrl: http://keycloak:8080
-      Keycloak__Realm: MyBiz
+      Keycloak__Realm: tysoft-apps
       Keycloak__ProvisionerSecret: ${KC_PROVISIONER_SECRET:?}
       Keycloak__WebUrl: https://${TYHR_DOMAIN:?}/
       Cors__Origins__0: https://${TYHR_DOMAIN:?}
@@ -61,7 +61,7 @@ services:
       context: ./web
       args:
         # The address browsers use.
-        VITE_OIDC_AUTHORITY: ${AUTH_URL:?}/realms/MyBiz
+        VITE_OIDC_AUTHORITY: ${AUTH_URL:?}/realms/tysoft-apps
     restart: unless-stopped
     logging: *logging
     networks: [edge]
